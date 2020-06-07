@@ -12,7 +12,6 @@ import unittest
 
 import plumpy
 import pytest
-from tornado import gen
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -77,6 +76,30 @@ def run_and_check_success(process_class, **kwargs):
     assert process.node.is_finished_ok is True
 
     return process
+
+class TestPersister(plumpy.Persister):
+    """
+    Test persister, just creates the bundle, noting else
+    """
+
+    def save_checkpoint(self, process, tag=None):
+        """ Create the checkpoint bundle """
+        persistence.Bundle(process)
+
+    def load_checkpoint(self, pid, tag=None):
+        raise NotImplementedError
+
+    def get_checkpoints(self):
+        raise NotImplementedError
+
+    def get_process_checkpoints(self, pid):
+        raise NotImplementedError
+
+    def delete_checkpoint(self, pid, tag=None):
+        raise NotImplementedError
+
+    def delete_process_checkpoints(self, pid):
+        raise NotImplementedError
 
 
 class Wf(WorkChain):
@@ -672,9 +695,8 @@ class TestWorkchain(AiidaTestCase):
         wc = IfTest()
         runner.schedule(wc)
 
-        @gen.coroutine
-        def run_async(workchain):
-            yield run_until_paused(workchain)
+        async def run_async(workchain):
+            await run_until_paused(workchain)
             self.assertTrue(workchain.ctx.s1)
             self.assertFalse(workchain.ctx.s2)
 
@@ -692,11 +714,11 @@ class TestWorkchain(AiidaTestCase):
             self.assertDictEqual(bundle, bundle2)
 
             workchain.play()
-            yield workchain.future()
+            await workchain.future()
             self.assertTrue(workchain.ctx.s1)
             self.assertTrue(workchain.ctx.s2)
 
-        runner.loop.run_sync(lambda: run_async(wc))
+        runner.loop.run_until_complete(run_async(wc))
 
     def test_report_dbloghandler(self):
         """
@@ -873,18 +895,17 @@ class TestWorkChainAbort(AiidaTestCase):
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        @gen.coroutine
-        def run_async():
-            yield run_until_paused(process)
+        async def run_async():
+            await run_until_paused(process)
 
             process.play()
 
             with Capturing():
                 with self.assertRaises(RuntimeError):
-                    yield process.future()
+                    await process.future()
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
+        runner.loop.run_until_complete(run_async())
 
         self.assertEqual(process.node.is_finished_ok, False)
         self.assertEqual(process.node.is_excepted, True)
@@ -899,9 +920,8 @@ class TestWorkChainAbort(AiidaTestCase):
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        @gen.coroutine
-        def run_async():
-            yield run_until_paused(process)
+        async def run_async():
+            await run_until_paused(process)
 
             self.assertTrue(process.paused)
             process.kill()
@@ -910,7 +930,7 @@ class TestWorkChainAbort(AiidaTestCase):
                 launch.run(process)
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
+        runner.loop.run_until_complete(run_async())
 
         self.assertEqual(process.node.is_finished_ok, False)
         self.assertEqual(process.node.is_excepted, False)
@@ -986,17 +1006,16 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         runner = get_manager().get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
-        @gen.coroutine
-        def run_async():
-            yield run_until_waiting(process)
+        async def run_async():
+            await run_until_waiting(process)
 
             process.kill()
 
             with self.assertRaises(plumpy.KilledError):
-                yield process.future()
+                await process.future()
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
+        runner.loop.run_until_complete(run_async())
 
         child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         self.assertEqual(child.is_finished_ok, False)
