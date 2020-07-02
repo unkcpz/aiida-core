@@ -336,6 +336,7 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
     """
     # pylint: disable=too-many-branches
     import kiwipy
+    from plumpy.futures import unwrap_kiwi_future
     from concurrent import futures
 
     from aiida.manage.external.rmq import CommunicationTimeout
@@ -347,6 +348,8 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
             process = futures_map[future]
 
             try:
+                # unwrap is need here since LoopCommunicator will also wrap a future
+                future = unwrap_kiwi_future(future)
                 result = future.result()
             except CommunicationTimeout:
                 echo.echo_error('call to {} Process<{}> timed out'.format(infinitive, process.pk))
@@ -373,6 +376,12 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
 
                 try:
                     result = future.result()
+
+                    # special for process kill:
+                    # killing process and its child process
+                    # will return the Future represent the list of Boolean value.
+                    if isinstance(result, list):
+                        result = all(result)
                 except Exception as exception:  # pylint: disable=broad-except
                     echo.echo_error('failed to {} Process<{}>: {}'.format(infinitive, process.pk, exception))
                 else:

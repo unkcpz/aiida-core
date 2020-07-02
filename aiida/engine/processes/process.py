@@ -14,6 +14,8 @@ import inspect
 import uuid
 import traceback
 
+from typing import Union
+
 from pika.exceptions import ConnectionClosed
 
 import plumpy
@@ -248,14 +250,11 @@ class Process(plumpy.Process):
 
         self.node.logger.info('Loaded process<{}> from saved state'.format(self.node.pk))
 
-    def kill(self, msg=None):
+    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.Future]:
         """
         Kill the process and all the children calculations it called
 
         :param msg: message
-        :type msg: str
-
-        :rtype: bool
         """
         self.node.logger.info('Request to kill Process<{}>'.format(self.node.pk))
 
