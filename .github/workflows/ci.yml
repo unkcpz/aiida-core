@@ -124,6 +124,7 @@ jobs:
         pip install --no-deps -e .
         pip install --upgrade git+https://github.com/unkcpz/plumpy.git@gsoc/fix/ensure_coroutine
         pip install --upgrade git+https://github.com/unkcpz/nest_asyncio.git@master
+        pip install --upgrade git+https://github.com/unkcpz/circus.git@gsoc/new-tornado
         reentry scan
         pip freeze
 
