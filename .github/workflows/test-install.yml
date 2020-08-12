@@ -149,6 +149,7 @@ jobs:
     - name: Install aiida-core
       run: |
         pip install -e .[atomic_tools,docs,notebook,rest,tests]
+        pip install --upgrade git+https://github.com/unkcpz/circus.git@fix/quit-wait
         reentry scan
 
     - run: pip freeze
