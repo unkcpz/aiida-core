@@ -111,7 +111,7 @@ jobs:
 
     - name: Upgrade pip
       run: |
-        pip install --upgrade pip
+        pip install --upgrade git+https://github.com/pypa/pip@master
         pip --version
 
     - name: upgrade setuptools [py35]
