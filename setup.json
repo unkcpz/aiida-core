@@ -24,7 +24,6 @@
         "aldjemy~=0.9.1",
         "alembic~=1.2",
         "aio-pika~=6.6",
-        "circus~=0.16.1",
         "click-completion~=0.5.1",
         "click-config-file~=0.6.0",
         "click-spinner~=0.1.8",
