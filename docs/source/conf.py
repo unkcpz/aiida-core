@@ -408,3 +408,7 @@ with open('nitpick-exceptions', 'r') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
     ]
+
+linkcheck_ignore = [r'http://localhost:\d+/',
+                    r'http://127.0.0.1:\d+/',
+                    r'http://www.wannier.org/support/']
