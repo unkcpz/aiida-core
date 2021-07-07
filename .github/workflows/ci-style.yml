@@ -35,23 +35,3 @@ jobs:
     - name: Run pre-commit
       run:
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
-
-  docs-linkcheck:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-    - name: Install python dependencies
-      run: |
-        pip install -e .[docs,tests]
-    - name: "Build HTML docs"
-      run: |
-        make -C docs html linkcheck
-      env:
-        SPHINXOPTS: -nW --keep-going
