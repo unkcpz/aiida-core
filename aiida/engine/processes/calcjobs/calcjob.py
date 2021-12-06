@@ -23,6 +23,9 @@ from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 
+from aiida.orm.nodes.data.container_code import ContainerCode
+
+
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
 from ..process import Process, ProcessState
@@ -687,7 +690,7 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
+            this_code = load_node(code_info.code_uuid, sub_classes=(Code, ContainerCode))
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -708,6 +711,11 @@ class CalcJob(Process):
                 )
             else:
                 this_argv = [this_code.get_execname()
+                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+                
+            # set this_argv only for container code
+            if isinstance(this_code, ContainerCode):
+                this_argv = this_code.container_cmd_params() + [this_code.get_image()] + [this_code.get_container_exec_path()
                              ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
             # overwrite the old cmdline_params and add codename and mpirun stuff
