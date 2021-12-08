@@ -40,6 +40,9 @@ def escape_for_bash(str_to_escape):
 
     str_to_escape = str(str_to_escape)
 
+    if '$' in str_to_escape:
+        return f'"{str_to_escape}"'
+
     escaped_quotes = str_to_escape.replace("'", """'"'"'""")
     return f"'{escaped_quotes}'"
 
