@@ -20,7 +20,7 @@ def test_escape_for_bash():
         ["string with a ' single quote", """'string with a '"'"' single quote'"""],
         [1, "'1'"],
         [2.0, "'2.0'"],
-        ['$PWD', "$PWD"],
+        ['$PWD', '$PWD'],
     )
 
     for string_input, string_escaped in tests:

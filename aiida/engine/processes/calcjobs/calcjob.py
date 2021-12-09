@@ -22,9 +22,7 @@ from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-
 from aiida.orm.nodes.data.container_code import ContainerCode
-
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -712,11 +710,12 @@ class CalcJob(Process):
             else:
                 this_argv = [this_code.get_execname()
                              ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
-                
+
             # set this_argv only for container code
             if isinstance(this_code, ContainerCode):
-                this_argv = [this_code.container_cmd_params()] + [this_code.get_image()] + [this_code.get_container_exec_path()
-                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+                this_argv = [this_code.container_cmd_params()] + [this_code.get_image()] + [
+                    this_code.get_container_exec_path()
+                ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
