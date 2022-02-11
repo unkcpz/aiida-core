@@ -17,9 +17,9 @@ the data structure that is returned when querying for jobs in the scheduler
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass, field
 import enum
 import json
+from dataclasses import dataclass, field
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
@@ -358,7 +358,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'codes_run_mode',
         'codes_info',
     )
-
+    
 
 @dataclass
 class JobTemplateCodeInfo:
@@ -374,7 +374,9 @@ class JobTemplateCodeInfo:
     :param stderr_name: filename of the the `stderr` file descriptor.
     :param join_files: boolean, if true, `stderr` should be redirected to `stdout`.
     """
+    prepend_cmdline_params: list[str] = field(default_factory=list)
     cmdline_params: list[str] = field(default_factory=list)
+    use_double_quotes: list[bool] = field(default_factory=list)
     stdin_name: None | str = None
     stdout_name: None | str = None
     stderr_name: None | str = None

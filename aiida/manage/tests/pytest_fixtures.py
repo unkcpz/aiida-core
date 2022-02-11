@@ -185,7 +185,7 @@ def aiida_local_code_factory(aiida_localhost):
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost, label=None, prepend_text=None, append_text=None):
+    def get_code(entry_point, executable, computer=aiida_localhost, label=None, use_double_quotes=False, prepend_text=None, append_text=None):
         """Get local code.
 
         Sets up code for given entry point on given computer.
@@ -193,6 +193,7 @@ def aiida_local_code_factory(aiida_localhost):
         :param entry_point: Entry point of calculation plugin
         :param executable: name of executable; will be searched for in local system PATH.
         :param computer: (local) AiiDA computer
+        :param use_double_quotes: use double quotes to espace the code related cmdline_params
         :param prepend_text: a string of code that will be put in the scheduler script before the execution of the code.
         :param append_text: a string of code that will be put in the scheduler script after the execution of the code.
         :return: the `Code` either retrieved from the database or created if it did not yet exist.
@@ -221,6 +222,8 @@ def aiida_local_code_factory(aiida_localhost):
         code = Code(input_plugin_name=entry_point, remote_computer_exec=[computer, executable_path])
         code.label = label
         code.description = label
+
+        code.set_use_double_quotes(use_double_quotes)
 
         if prepend_text is not None:
             code.set_prepend_text(prepend_text)
