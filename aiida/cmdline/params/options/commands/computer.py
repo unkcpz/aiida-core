@@ -119,12 +119,11 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
 
 USE_DOUBLE_QUOTES = OverridableOption(
     '--use-double-quotes/--not-use-double-quotes',
-    is_eager=False,
     default=False,
     cls=InteractiveOption,
-    prompt='Whether use double quotes for prepend cmdline params?',
-    help='Whether the cmdline parameters before the code executable parameters in '
-    'script using the double quotes to escape.',
+    prompt='Escape CLI arguments in double quotes',
+    help=
+    'Whether the command line arguments before and after the executable in the submission script should be escaped with single or double quotes.'
 )
 
 PREPEND_TEXT = OverridableOption(

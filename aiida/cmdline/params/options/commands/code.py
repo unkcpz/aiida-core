@@ -111,11 +111,11 @@ REL_PATH = OverridableOption(
 
 USE_DOUBLE_QUOTES = OverridableOption(
     '--use-double-quotes/--not-use-double-quotes',
-    is_eager=False,
     default=False,
     cls=InteractiveOption,
-    prompt='Whether use double quotes for code cmdline params?',
-    help='Whether the code executable parameters in script using the double quotes to escape.'
+    prompt='Escape CLI arguments in double quotes',
+    help=
+    'Whether the executable and arguments of the code in the submission script should be escaped with single or double quotes.'
 )
 
 LABEL = options.LABEL.clone(

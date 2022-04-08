@@ -350,10 +350,12 @@ class Code(Data):
         was set.
         """
         return self.base.attributes.get('input_plugin', None)
-    
+
     def set_use_double_quotes(self, use_double_quotes):
         """
-        Set whether a code cmdline is escape with double quotes.
+        Set whether the command line invocation of this code should be escaped with double quotes.
+        
+        :param use_double_quotes: boolean, True if to escape with double quotes, False otherwise.
         """
         from aiida.common.lang import type_check
         type_check(use_double_quotes, bool)
@@ -361,9 +363,11 @@ class Code(Data):
 
     def get_use_double_quotes(self):
         """
-        Return whether a code is escape with double quotes (False, default) or not (True).
+        Return whether the command line invocation of this code should be escaped with double quotes.
+
+        :returns: boolean, True if to escape with double quotes, False otherwise which is also the default.
         """
-        return self.base.attributes.set('use_double_quotes', False)
+        return self.base.attributes.get('use_double_quotes', False)
 
     def set_append_text(self, code):
         """

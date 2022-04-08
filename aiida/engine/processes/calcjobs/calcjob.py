@@ -709,9 +709,10 @@ class CalcJob(Process):
 
             if this_withmpi:
                 prepend_cmdline_params = mpi_args + extra_mpirun_params
+            else:
+                prepend_cmdline_params = []
 
-            cmdline_params = [this_code.get_execname()
-                              ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+            cmdline_params = [this_code.get_execname()] + (code_info.cmdline_params or [])
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params

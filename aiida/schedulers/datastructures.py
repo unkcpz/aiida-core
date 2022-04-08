@@ -17,9 +17,9 @@ the data structure that is returned when querying for jobs in the scheduler
 from __future__ import annotations
 
 import abc
+from dataclasses import dataclass, field
 import enum
 import json
-from dataclasses import dataclass, field
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
@@ -358,7 +358,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'codes_run_mode',
         'codes_info',
     )
-    
+
 
 @dataclass
 class JobTemplateCodeInfo:
@@ -368,7 +368,9 @@ class JobTemplateCodeInfo:
     `Scheduler.get_submit_script` will pass a list of these objects to `Scheduler._get_run_line` which
     should build up the code execution line based on the parameters specified in this dataclass.
 
+    :param prepend_cmdline_params: list of unescaped prepend cmdline parameters.
     :param cmdline_params: list of unescaped command line parameters.
+    :param use_double_quotes: two elements bool list where first element for computer and second for code.
     :param stdin_name: filename of the the stdin file descriptor.
     :param stdout_name: filename of the the `stdout` file descriptor.
     :param stderr_name: filename of the the `stderr` file descriptor.

@@ -438,12 +438,27 @@ class Computer(entities.Entity['BackendComputer']):
 
     def set_append_text(self, val: str) -> None:
         self.set_property('append_text', str(val))
-        
+
     def get_use_double_quotes(self) -> bool:
+        """
+        Return whether computer related parts of the command line parameters
+        invocation of code should be escaped with double quotes.
+
+        :returns: boolean, True if to escape with double quotes, False otherwise which is also the default.
+        """
         return self.get_property('use_double_quotes', False)
-    
+
     def set_use_double_quotes(self, val: bool) -> None:
-        self.set_property('use_double_quotes', bool(val))
+        """
+        Set whether computer related parts (mpi parameters, scheduler parameters,
+        input and output redirection parameters) of the command line parameters
+        invocation of code should be escaped with double quotes.
+
+        :param val: boolean, True if to escape with double quotes, False otherwise.
+        """
+        from aiida.common.lang import type_check
+        type_check(val, bool)
+        self.set_property('use_double_quotes', val)
 
     def get_mpirun_command(self) -> List[str]:
         """
