@@ -122,9 +122,8 @@ USE_DOUBLE_QUOTES = OverridableOption(
     default=False,
     cls=InteractiveOption,
     prompt='Escape CLI arguments in double quotes',
-    help=
-    'Whether the command line arguments before and after the executable in the submission script should be escaped '
-    'with single or double quotes.'
+    help='Whether the command line arguments before and after the executable in the submission script should be '
+    'escaped with single or double quotes.'
 )
 
 PREPEND_TEXT = OverridableOption(
