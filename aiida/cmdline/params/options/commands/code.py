@@ -114,8 +114,7 @@ USE_DOUBLE_QUOTES = OverridableOption(
     default=False,
     cls=InteractiveOption,
     prompt='Escape CLI arguments in double quotes',
-    help=
-    'Whether the executable and arguments of the code in the submission script should be escaped with single '
+    help='Whether the executable and arguments of the code in the submission script should be escaped with single '
     'or double quotes.'
 )
 

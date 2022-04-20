@@ -354,7 +354,7 @@ class Code(Data):
     def set_use_double_quotes(self, use_double_quotes):
         """
         Set whether the command line invocation of this code should be escaped with double quotes.
-        
+
         :param use_double_quotes: boolean, True if to escape with double quotes, False otherwise.
         """
         from aiida.common.lang import type_check
