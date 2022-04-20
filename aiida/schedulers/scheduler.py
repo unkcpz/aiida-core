@@ -229,14 +229,17 @@ class Scheduler(metaclass=abc.ABCMeta):
                 command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_use_double_quotes))
             command_to_exec = ' '.join(command_to_exec_list)
 
-            stdin_str = f'< {escape_for_bash(code_info.stdin_name, use_double_quotes=computer_use_double_quotes)}' if code_info.stdin_name else ''
-            stdout_str = f'> {escape_for_bash(code_info.stdout_name, use_double_quotes=computer_use_double_quotes)}' if code_info.stdout_name else ''
+            stdin_str = f'< {escape_for_bash(code_info.stdin_name, use_double_quotes=computer_use_double_quotes)}' \
+                if code_info.stdin_name else ''
+            stdout_str = f'> {escape_for_bash(code_info.stdout_name, use_double_quotes=computer_use_double_quotes)}' \
+                if code_info.stdout_name else ''
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = '2>&1'
             else:
-                stderr_str = f'2> {escape_for_bash(code_info.stderr_name, use_double_quotes=computer_use_double_quotes)}' if code_info.stderr_name else ''
+                stderr_str = f'2> {escape_for_bash(code_info.stderr_name, use_double_quotes=computer_use_double_quotes)}' \
+                    if code_info.stderr_name else ''
 
             output_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
 

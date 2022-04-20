@@ -115,7 +115,8 @@ USE_DOUBLE_QUOTES = OverridableOption(
     cls=InteractiveOption,
     prompt='Escape CLI arguments in double quotes',
     help=
-    'Whether the executable and arguments of the code in the submission script should be escaped with single or double quotes.'
+    'Whether the executable and arguments of the code in the submission script should be escaped with single '
+    'or double quotes.'
 )
 
 LABEL = options.LABEL.clone(
