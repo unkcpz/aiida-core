@@ -1,0 +1,8 @@
+{# templates/job_run_lines.j2 #}
+
+{% for c in code_infos %}
+    {{ c.prepend_cmdline_params }} {{ c.cmdline_params }} {{ c.append_cmdline_params }} {{ '&' if parallel }}
+{% endfor %}
+
+{{ 'wait' if parallel }}
+
