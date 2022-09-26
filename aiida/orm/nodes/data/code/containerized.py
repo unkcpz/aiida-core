@@ -7,13 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Data plugins representing an executable code to be run in a container.
+"""
+Data plugins representing an executable code to be run in a container.
 These plugins are directly analogous to the ``InstalledCode`` and ``PortableCode`` plugins, except that the executable
 is present inside of a container. For the ``InstalledContainerizedCode`` the executable is expected to already be
 present inside a container that is available on the target computer. With the ``PortableContainerizedCode`` plugin, the
 target executable will be stored in AiiDA's storage, just as with the ``PortableCode`` and when launched, the code will
 be copied inside the container on the target computer and run inside the container.
-	"""
+"""
+from __future__ import annotations
+
 import click
 
 from aiida.common.lang import type_check
@@ -41,6 +44,7 @@ class Containerized(AbstractCode):
     @property
     def engine_command(self) -> str:
         """Return the engine command with image as template field of the containerized code
+        
         :return: The engine command of the containerized code
         """
         return self.base.attributes.get(self._KEY_ATTRIBUTE_ENGINE_COMMAND)
@@ -48,6 +52,7 @@ class Containerized(AbstractCode):
     @engine_command.setter
     def engine_command(self, value: str) -> None:
         """Set the engine command of the containerized code
+        
         :param value: The engine command of the containerized code
         """
         type_check(value, str)
@@ -60,6 +65,7 @@ class Containerized(AbstractCode):
     @property
     def image(self) -> str:
         """The image of container
+        
         :return: The image of container.
         """
         return self.base.attributes.get(self._KEY_ATTRIBUTE_IMAGE)
@@ -67,25 +73,25 @@ class Containerized(AbstractCode):
     @image.setter
     def image(self, value: str) -> None:
         """Set the image name of container
+        
         :param value: The image name of container.
         """
         type_check(value, str)
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_IMAGE, value)
 
-    def get_engine_command(self) -> str:
-        """Return the engine command with image field set with image name.
-        :return: The engine command in script job with image field set with the image name.
-        """
-        cmdline = self.engine_command.format(image=self.image)
+    def get_prepend_cmdline_params(
+        self,
+        mpi_args: list[str] | None = None,
+        extra_mpirun_params: list[str] | None = None
+    ) -> list[str]:
+        """Return the list of prepend cmdline params for mpi seeting
 
-        return cmdline.split()
+        :return: list of prepend cmdline parameters."""
+        engine_cmdline = self.engine_command.format(image=self.image)
+        engine_cmdline_params = engine_cmdline.split()
 
-    def get_mpirun_command(self) -> list:
-        """Return the mpi_args in terms of code."""
-        mpi_args = self.mpi_args
-
-        return mpi_args.split()
+        return (mpi_args or []) + (extra_mpirun_params or []) + engine_cmdline_params
 
     @classmethod
     def _get_cli_options(cls) -> dict:

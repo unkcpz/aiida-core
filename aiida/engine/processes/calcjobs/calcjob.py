@@ -24,7 +24,6 @@ from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-from aiida.orm.nodes.data.code.containerized import Containerized
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -740,9 +739,6 @@ class CalcJob(Process):
                 prepend_cmdline_params = this_code.get_prepend_cmdline_params()
 
             cmdline_params = this_code.get_executable_cmdline_params(cmdline_params=code_info.cmdline_params)
-
-            if isinstance(this_code, Containerized):
-                prepend_cmdline_params += this_code.get_engine_command()
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
