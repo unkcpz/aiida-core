@@ -44,7 +44,7 @@ class Containerized(AbstractCode):
     @property
     def engine_command(self) -> str:
         """Return the engine command with image as template field of the containerized code
-        
+
         :return: The engine command of the containerized code
         """
         return self.base.attributes.get(self._KEY_ATTRIBUTE_ENGINE_COMMAND)
@@ -52,7 +52,7 @@ class Containerized(AbstractCode):
     @engine_command.setter
     def engine_command(self, value: str) -> None:
         """Set the engine command of the containerized code
-        
+
         :param value: The engine command of the containerized code
         """
         type_check(value, str)
@@ -65,7 +65,7 @@ class Containerized(AbstractCode):
     @property
     def image(self) -> str:
         """The image of container
-        
+
         :return: The image of container.
         """
         return self.base.attributes.get(self._KEY_ATTRIBUTE_IMAGE)
@@ -73,7 +73,7 @@ class Containerized(AbstractCode):
     @image.setter
     def image(self, value: str) -> None:
         """Set the image name of container
-        
+
         :param value: The image name of container.
         """
         type_check(value, str)
@@ -81,9 +81,7 @@ class Containerized(AbstractCode):
         self.base.attributes.set(self._KEY_ATTRIBUTE_IMAGE, value)
 
     def get_prepend_cmdline_params(
-        self,
-        mpi_args: list[str] | None = None,
-        extra_mpirun_params: list[str] | None = None
+        self, mpi_args: list[str] | None = None, extra_mpirun_params: list[str] | None = None
     ) -> list[str]:
         """Return the list of prepend cmdline params for mpi seeting
 

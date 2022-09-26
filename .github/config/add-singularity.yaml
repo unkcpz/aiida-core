@@ -1,0 +1,10 @@
+---
+label: add-singularity
+description: add executed on singularity
+default_calc_job_plugin: core.arithmetic.add
+computer: localhost
+filepath_executable: /bin/sh
+image: docker://alpine
+engine_command: singularity exec --bind $PWD:$PWD {image}
+prepend_text: ' '
+append_text: ' '

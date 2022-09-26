@@ -1,6 +1,7 @@
 name: nightly
 
 on:
+    workflow_dispatch: # To manually trigger nightly
     schedule:
     -   cron: '0 0 * * *'  # Run every day at midnight
     pull_request:
@@ -44,6 +45,9 @@ jobs:
 
         steps:
         -   uses: actions/checkout@v2
+        -   uses: eWaterCycle/setup-singularity@v7  # for containerized code test
+            with:
+                singularity-version: 3.8.7
 
         -   name: Cache Python dependencies
             uses: actions/cache@v1
