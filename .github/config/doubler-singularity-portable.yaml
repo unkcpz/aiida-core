@@ -1,0 +1,10 @@
+---
+label: numpy-double-portable
+description: "containerized portable code of numpy multiply by 2"
+default_calc_job_plugin: core.templatereplacer
+filepath_executable: doubler.py
+filepath_files: /home/jyu/Projects/WP-aiida/aiida-core/.github/config/portable_codes
+image: docker://clearlinux/numpy-mp
+engine_command: singularity exec --bind $PWD:$PWD --env APPEND_PATH=$PWD {image}
+prepend_text: ' '
+append_text: ' '

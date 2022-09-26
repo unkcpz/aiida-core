@@ -1,0 +1,10 @@
+---
+label: numpy-mul-installed
+description: "containerized portable code of numpy multiply"
+default_calc_job_plugin: core.templatereplacer
+computer: localhost
+filepath_executable: /bin/python
+image: docker://clearlinux/numpy-mp
+engine_command: singularity exec --bind $PWD:$PWD {image}
+prepend_text: ' '
+append_text: ' '
