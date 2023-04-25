@@ -38,3 +38,7 @@ docs/source/reference/apidoc
 _sandbox
 
 pplot_out/
+
+# docker
+.doit.*
+docker-bake.override.json

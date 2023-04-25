@@ -1,0 +1,63 @@
+---
+name: Build image and then upload the image, tags and manifests to GitHub artifacts
+
+env:
+    OWNER: ${{ github.repository_owner }}
+
+on:
+    workflow_call:
+        inputs:
+            architecture:
+                description: Image architecture, e.g. amd64, arm64
+                required: true
+                type: string
+            runsOn:
+                description: GitHub Actions Runner image
+                required: true
+                type: string
+
+jobs:
+    build-test-upload:
+        runs-on: ${{ inputs.runsOn }}
+        defaults:
+            run:
+              shell: bash
+              working-directory: .docker
+
+        steps:
+            - name: Checkout Repo ⚡️
+              uses: actions/checkout@v3
+            - name: Create dev environment 📦
+              uses: ./.github/actions/create-dev-env
+              with:
+                  architecture: ${{ inputs.architecture }}
+
+            - name: Build image base and base-with-services (output image name aiida-coer §) 🛠
+              run: doit build --target base --target base-with-services --arch ${{ inputs.architecture }} --organization ${{ env.OWNER }}
+              env:
+                  # Full logs for CI build
+                  BUILDKIT_PROGRESS: plain
+
+            - name: Run tests ✅
+              run: VERSION=newly-build python -m pytest -s tests
+
+            - name: Save image as a tar for later use 💾
+              run: |
+                docker save ${{ env.OWNER }}/base -o /tmp/base-${{ inputs.architecture }}.tar
+                docker save ${{ env.OWNER }}/aiida-core -o /tmp/aiida-core-${{ inputs.architecture }}.tar
+
+            - name: Upload base image as artifact 💾
+              uses: actions/upload-artifact@v3
+              with:
+                  name: base-${{ inputs.architecture }}
+                  path: /tmp/base-${{ inputs.architecture }}.tar
+                  retention-days: 3
+              if: ${{ !github.event.pull_request.head.repo.fork }}
+
+            - name: Upload aiida-core image as artifact 💾
+              uses: actions/upload-artifact@v3
+              with:
+                  name: aiida-core-${{ inputs.architecture }}
+                  path: /tmp/aiida-core-${{ inputs.architecture }}.tar
+                  retention-days: 3
+              if: ${{ !github.event.pull_request.head.repo.fork }}
