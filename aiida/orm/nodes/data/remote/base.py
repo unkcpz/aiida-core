@@ -9,12 +9,29 @@
 ###########################################################################
 """Data plugin that models a folder on a remote computer."""
 import os
+from typing import Any, List
 
 from aiida.orm import AuthInfo
+from aiida.orm.nodes.caching import NodeCaching
 
 from ..data import Data
 
 __all__ = ('RemoteData',)
+
+
+class RemoteFolderCaching(NodeCaching):
+
+    def _get_objects_to_hash(self) -> List[Any]:
+        """
+        Return a list of objects which should be included in the hash.
+        """
+        res = super()._get_objects_to_hash()  # pylint: disable=protected-access
+
+        creator = self._node.creator
+
+        if creator is not None:
+            res.append(creator.get_hash())
+        return res
 
 
 class RemoteData(Data):
@@ -25,6 +42,7 @@ class RemoteData(Data):
     """
 
     KEY_EXTRA_CLEANED = 'cleaned'
+    _CLS_NODE_CACHING = RemoteFolderCaching
 
     def __init__(self, remote_path=None, **kwargs):
         super().__init__(**kwargs)
