@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements,unnecessary-lambda-assignment
 """Create an AiiDA archive.
 
 The archive is a subset of the provenance graph,
@@ -345,7 +345,7 @@ def create_archive(
 
         if filename.exists():
             filename.unlink()
-        shutil.move(tmp_filename, filename)  # type: ignore[arg-type]
+        shutil.move(tmp_filename, filename)
 
     EXPORT_LOGGER.report('Archive created successfully')
 
