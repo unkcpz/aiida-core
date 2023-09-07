@@ -9,10 +9,10 @@ You can also specify a custom platform with the `--platform`, example: `docker b
 
 ### Test the build images locally
 
-Run 
+Run
 
 ```bash
-TAG=newly-build python -m pytest -s tests
+TAG=newly-baked python -m pytest -s tests
 ```
 
 ### Trigger a build on ghcr.io and dockerhub

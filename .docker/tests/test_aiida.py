@@ -14,7 +14,7 @@ def test_correct_python_version_installed(aiida_exec, python_version):
 
 
 def test_correct_pgsql_version_installed(aiida_exec, pgsql_version, variant):
-    if variant == 'base':
+    if variant == 'aiida-core-base':
         pytest.skip('PostgreSQL is not installed in the base image')
 
     info = json.loads(aiida_exec('mamba list --json --full-name postgresql').decode())[0]

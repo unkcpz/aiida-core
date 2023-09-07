@@ -33,13 +33,13 @@ jobs:
                   architecture: ${{ inputs.architecture }}
 
             - name: Build image base and base-with-services (output image name aiida-coer §) 🛠
-              run: docker buildx bake -f build.json -f docker-bake.hcl --set *.platform=linux/amd64 --load
+              run: docker buildx bake -f build.json -f docker-bake.hcl --set *.platform=linux/${{ inputs.architecture }} --load
               env:
                   # Full logs for CI build
                   BUILDKIT_PROGRESS: plain
 
             - name: Run tests ✅
-              run: TAG=newly-build python -m pytest -s tests
+              run: TAG=newly-baked python -m pytest -s tests
 
             - name: Save image as a tar for later use 💾
               run: |
