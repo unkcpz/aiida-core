@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture(scope='session', params=['base', 'base-with-services'])
+@pytest.fixture(scope='session', params=['aiida-core-base', 'aiida-core-with-services'])
 def variant(request):
     return request.param
 

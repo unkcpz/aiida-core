@@ -5,8 +5,15 @@
 To build the images, run `docker buildx bake -f build.json -f docker-bake.hcl --load` (tested with *docker buildx* version v0.8.2).
 
 The build system will attempt to detect the local architecture and automatically build images for it (tested with amd64 and arm64).
-All commands `build`, `tests`, and `up` will use the locally detected platform and use a version tag based on the state of the local git repository.
-However, you can also specify a custom platform with the `--platform`, example: `docker buildx bake -f build.json -f docker-bake.hcl --set *.platform=linux/amd64 --load`.
+You can also specify a custom platform with the `--platform`, example: `docker buildx bake -f build.json -f docker-bake.hcl --set *.platform=linux/amd64 --load`.
+
+### Test the build images locally
+
+Run 
+
+```bash
+TAG=newly-build python -m pytest -s tests
+```
 
 ### Trigger a build on ghcr.io and dockerhub
 

@@ -4,7 +4,7 @@ version: '3.4'
 services:
 
     aiida:
-        image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/aiida-core}:${VERSION:-latest}
+        image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/aiida-core-with-services}:${TAG:-latest}
         environment:
             TZ: Europe/Zurich
             SETUP_DEFAULT_AIIDA_PROFILE: 'true'

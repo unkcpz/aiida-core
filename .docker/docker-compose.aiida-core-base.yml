@@ -30,7 +30,7 @@ services:
             retries: 10
 
     aiida:
-        image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/base}:${VERSION:-latest}
+        image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/aiida-core-base}:${TAG:-latest}
         environment:
             RMQHOST: messaging
             TZ: Europe/Zurich

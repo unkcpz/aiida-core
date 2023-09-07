@@ -21,13 +21,12 @@ variable "PLATFORMS" {
 }
 
 variable "TARGETS" {
-  default = ["base", "base-with-services"]
+  default = ["aiida-core-base", "aiida-core-with-services"]
 }
 
 function "tags" {
   params = [image]
   result = [
-    "${REGISTRY}${ORGANIZATION}/${image}:latest",
     "${REGISTRY}${ORGANIZATION}/${image}:newly-build"
   ]
 }
@@ -36,16 +35,16 @@ group "default" {
   targets = "${TARGETS}"
 }
 
-target "base-meta" {
-  tags = tags("base")
+target "aiida-core-base-meta" {
+  tags = tags("aiida-core-base")
 }
-target "base-with-services-meta" {
-  tags = tags("aiida-core")
+target "aiida-core-with-services-meta" {
+  tags = tags("aiida-core-with-services")
 }
 
-target "base" {
-  inherits = ["base-meta"]
-  context = "base"
+target "aiida-core-base" {
+  inherits = ["aiida-core-base-meta"]
+  context = "aiida-core-base"
   contexts = {
     src = ".."
   }
@@ -54,11 +53,11 @@ target "base" {
     "PYTHON_VERSION" = "${PYTHON_VERSION}"
   }
 }
-target "base-with-services" {
-  inherits = ["base-with-services-meta"]
-  context = "base-with-services"
+target "aiida-core-with-services" {
+  inherits = ["aiida-core-with-services-meta"]
+  context = "aiida-core-with-services"
   contexts = {
-    base = "target:base"
+    base = "target:aiida-core-base"
   }
   platforms = "${PLATFORMS}"
   args = {

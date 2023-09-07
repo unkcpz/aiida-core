@@ -39,7 +39,7 @@ jobs:
                   BUILDKIT_PROGRESS: plain
 
             - name: Run tests ✅
-              run: VERSION=newly-build python -m pytest -s tests
+              run: TAG=newly-build python -m pytest -s tests
 
             - name: Save image as a tar for later use 💾
               run: |
