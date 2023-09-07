@@ -40,5 +40,4 @@ _sandbox
 pplot_out/
 
 # docker
-.doit.*
 docker-bake.override.json

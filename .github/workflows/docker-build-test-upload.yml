@@ -33,7 +33,7 @@ jobs:
                   architecture: ${{ inputs.architecture }}
 
             - name: Build image base and base-with-services (output image name aiida-coer §) 🛠
-              run: doit build --target base --target base-with-services --arch ${{ inputs.architecture }} --organization ${{ env.OWNER }}
+              run: docker buildx bake -f build.json -f docker-bake.hcl --set *.platform=linux/amd64 --load
               env:
                   # Full logs for CI build
                   BUILDKIT_PROGRESS: plain

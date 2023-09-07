@@ -5,6 +5,4 @@ requests
 tabulate
 pytest-docker
 docker-compose
-doit
-dunamai
 pyyaml<=5.3.1
