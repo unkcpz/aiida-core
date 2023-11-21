@@ -14,8 +14,8 @@ echo MNESIA_BASE="${RABBITMQ_DATA_DIR}" >> "${RMQ_ETC_DIR}/rabbitmq-env.conf"
 echo LOG_BASE="${RABBITMQ_DATA_DIR}/log" >> "${RMQ_ETC_DIR}/rabbitmq-env.conf"
 
 # using workaround from https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use
-# set timeout to 100 hours
-echo "consumer_timeout=3600000" >> "${RMQ_ETC_DIR}/rabbitmq.conf"
+# 1000 hours in milliseconds
+echo "consumer_timeout=3600000000" >> "${RMQ_ETC_DIR}/rabbitmq.conf"
 
 # Explicitly define the node name. This is necessary because the mnesia subdirectory contains the hostname, which by
 # default is set to the value of $(hostname -s), which for docker containers, will be a random hexadecimal string. Upon
