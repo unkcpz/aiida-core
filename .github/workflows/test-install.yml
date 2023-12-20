@@ -1,39 +1,28 @@
 name: test-install
 
 on:
-  pull_request:
-    paths:
-      - 'environment.yml'
-      - '**/requirements*.txt'
-      - 'pyproject.toml'
-      - 'util/dependency_management.py'
-      - '.github/workflows/test-install.yml'
-    branches-ignore: [gh-pages]
-  schedule:
-    - cron: '30 02 * * *'  # nightly build
-
-# https://docs.github.com/en/actions/using-jobs/using-concurrency
-concurrency:
-    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+    workflow_call:
+        inputs:
+            python-version:
+                description: Python version
+                required: true
+                type: string
 
 jobs:
 
   validate-dependency-specification:
     # Note: The specification is also validated by the pre-commit hook.
 
-    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '${{ inputs.python-version }}'
 
     - name: Install utils/ dependencies
       run: pip install -r utils/requirements.txt
@@ -51,20 +40,14 @@ jobs:
     # https://github.com/pypa/pip/issues/7819
 
     needs: [validate-dependency-specification]
-    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
-
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -77,22 +60,21 @@ jobs:
 
     - name: Create environment from requirements file.
       run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install -r requirements/requirements-py-${{ inputs.python-version }}.txt
         pip freeze
 
   create-conda-environment:
     # Verify that we can create a valid conda environment from the environment.yml file.
 
     needs: [validate-dependency-specification]
-    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -104,7 +86,6 @@ jobs:
 
   install-with-pip:
 
-    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -114,12 +95,12 @@ jobs:
         extras: [ '', '[atomic_tools,docs,notebook,rest,tests,tui]' ]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '${{ inputs.python-version }}'
 
     - name: Pip install
       id: pip_install
@@ -136,7 +117,6 @@ jobs:
   install-with-conda:
     # Verify that we can install AiiDA with conda.
 
-    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -144,7 +124,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: '${{ inputs.python-version }}'
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -157,10 +137,10 @@ jobs:
             optional: false
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -195,7 +175,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: '${{ inputs.python-version }}'
 
     services:
       postgres:
@@ -222,12 +202,12 @@ jobs:
           - 5001:22
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '${{ inputs.python-version }}'
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
@@ -280,7 +260,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.9
       uses: actions/setup-python@v2
