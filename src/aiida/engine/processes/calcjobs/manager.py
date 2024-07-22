@@ -146,7 +146,7 @@ class JobsList:
         else:
             for job_id, future in self._job_update_requests.items():
                 if not future.done():
-                    future.set_result(self._jobs_cache.get(job_id, None))
+                    future.set_result(self._jobs_cache.get(str(job_id), None))
         finally:
             self._job_update_requests = {}
 
@@ -235,13 +235,13 @@ class JobsList:
     def _update_requests_outstanding(self) -> bool:
         return any(not request.done() for request in self._job_update_requests.values())
 
-    def _get_jobs_with_scheduler(self) -> List[str]:
+    def _get_jobs_with_scheduler(self) -> List[Hashable]:
         """Get all the jobs that are currently with scheduler.
 
         :return: the list of jobs with the scheduler
         :rtype: list
         """
-        return [str(job_id) for job_id, _ in self._job_update_requests.items()]
+        return [job_id for job_id, _ in self._job_update_requests.items()]
 
 
 class JobManager:
