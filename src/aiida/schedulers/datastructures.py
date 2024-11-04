@@ -21,7 +21,8 @@ import enum
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
+import typing as t
 
 from aiida.common import AIIDA_LOGGER, CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
@@ -104,6 +105,29 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_tot_num_mpiprocs(self):
         """Return the total number of cpus of this job resource."""
+
+class JobResourceProtocol(Protocol):
+    _default_fields: tuple[t.Any]
+
+    @classmethod
+    def validate_resources(cls, **kwargs: None | t.Any) -> None | AttributeDict[str, t.Any]:
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: optional attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        ...
+
+    @classmethod
+    def accepts_default_mpiprocs_per_machine(cls) -> bool:
+        """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
+        ...
+
+    def get_tot_num_mpiprocs(self) -> int:
+        """Get the total number of cpus of this job resource.
+        """
+        ...
 
 
 class NodeNumberJobResource(JobResource):
