@@ -15,6 +15,8 @@ import io
 import json
 import os
 import shutil
+import typing as t
+# XXX: use t.Any
 from typing import Any, Dict, Hashable, Optional, Type, Union
 
 import plumpy.ports
@@ -34,6 +36,9 @@ from ..process_spec import CalcJobProcessSpec
 from .importer import CalcJobImporter
 from .monitors import CalcJobMonitor
 from .tasks import UPLOAD_COMMAND, Waiting
+
+if t.TYPE_CHECKING:
+    from aiida.schedulers.protocol import Scheduler
 
 __all__ = ('CalcJob',)
 
@@ -93,8 +98,8 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     if not resources_port.required:
         return None
 
-    computer = computer_from_code or computer_from_metadata
-    scheduler = computer.get_scheduler()
+    computer: orm.Computer = computer_from_code or computer_from_metadata
+    scheduler: 'Scheduler' = computer.get_scheduler()
     try:
         resources = inputs['metadata']['options']['resources']
     except KeyError:
@@ -752,7 +757,7 @@ class CalcJob(Process):
             )
             return None
 
-        scheduler = computer.get_scheduler()
+        scheduler: 'Scheduler' = computer.get_scheduler()
         filename_stderr = self.node.get_option('scheduler_stderr')
         filename_stdout = self.node.get_option('scheduler_stdout')
 
@@ -764,22 +769,22 @@ class CalcJob(Process):
             self.logger.info('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
             detailed_job_info = None
 
+        scheduler_stderr = None
         if filename_stderr is None:
             self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
         else:
             try:
                 scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr, mode='r')
             except FileNotFoundError:
-                scheduler_stderr = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
 
+        scheduler_stdout = None
         if filename_stdout is None:
             self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
         else:
             try:
                 scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout, mode='r')
             except FileNotFoundError:
-                scheduler_stdout = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:

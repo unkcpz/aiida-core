@@ -14,6 +14,7 @@
 
 from .datastructures import *
 from .plugins import *
+from .protocol import *
 from .scheduler import *
 
 __all__ = (

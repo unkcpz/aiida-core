@@ -22,7 +22,7 @@ from .fields import add_field
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.schedulers import Scheduler
+    from aiida.schedulers.protocol import Scheduler
     from aiida.transports import Transport
 
 __all__ = ('Computer',)
