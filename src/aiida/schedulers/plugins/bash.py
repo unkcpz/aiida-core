@@ -20,55 +20,6 @@ from aiida.schedulers.scheduler import Scheduler, SchedulerError, SchedulerProto
 
 __all__ = ('BashCliScheduler',)
 
-class BashCliSchedulerProtocol(SchedulerProtocol, Protocol):
-    def _get_submit_command(self, submit_script: str) -> str:
-        """Return the string to execute to submit a given script.
-
-        .. warning:: the `submit_script` should already have been bash-escaped
-
-        :param submit_script: the path of the submit script relative to the working directory.
-        :return: the string to execute to submit a given script.
-        """
-        ...
-
-    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
-        """Parse the output of the submit command returned by calling the `_get_submit_command` command.
-
-        :return: a string with the job ID or an exit code if the submission failed because the submission script is
-            invalid and the job should be terminated.
-        """
-        ...
-
-    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
-        """Return the command to get the most complete description possible of currently active jobs.
-
-        .. note::
-
-            Typically one can pass only either jobs or user, depending on the specific plugin. The choice can be done
-            according to the value returned by `self.get_feature('can_query_by_user')`
-
-        :param jobs: either None to get a list of all jobs in the machine, or a list of jobs.
-        :param user: either None, or a string with the username (to show only jobs of the specific user).
-        """
-        ...
-
-    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
-        """Parse the joblist output as returned by executing the command returned by `_get_joblist_command` method.
-
-        :return: list of `JobInfo` objects, one of each job each with at least its default params implemented.
-        """
-        ...
-
-    def _get_kill_command(self, jobid: str) -> str:
-        """Return the command to kill the job with specified jobid."""
-        ...
-
-    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
-        """Parse the output of the kill command.
-
-        :return: True if everything seems ok, False otherwise.
-        """
-        ...
 
 class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
     """Job scheduler that is interacted with through a CLI in bash."""
