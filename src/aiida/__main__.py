@@ -9,8 +9,11 @@
 """Expose the AiiDA CLI, for usage as `python -m aiida`"""
 
 import sys
+from typing import TypeAlias, cast
+
+ExitCode: TypeAlias = str | int | None
 
 if __name__ == '__main__':
     from aiida.cmdline.commands.cmd_verdi import verdi
 
-    sys.exit(verdi())
+    sys.exit(cast(ExitCode, verdi()))
