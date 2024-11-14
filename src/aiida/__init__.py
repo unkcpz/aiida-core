@@ -18,10 +18,6 @@ and workflow engine for the automation of complex sequences of simulations.
 
 More information at http://www.aiida.net
 """
-
-from aiida.common.log import configure_logging  # noqa: F401
-from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context  # noqa: F401
-
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '
     'For further information please visit http://www.aiida.net/. All rights reserved.'
@@ -34,6 +30,12 @@ __paper__ = (
     'data provenance", Scientific Data 7, 300 (2020); https://doi.org/10.1038/s41597-020-00638-4'
 )
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
+
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from IPython.core.interactiveshell import InteractiveShell
 
 
 def get_strict_version():
@@ -93,7 +95,7 @@ def get_file_header(comment_char: str = '# ') -> str:
     return '\n'.join(f'{comment_char}{line}' for line in lines)
 
 
-def load_ipython_extension(ipython):
+def load_ipython_extension(ipython: InteractiveShell):
     """Load the AiiDA IPython extension, using ``%load_ext aiida``."""
     from .tools.ipython.ipython_magics import AiiDALoaderMagics
 
