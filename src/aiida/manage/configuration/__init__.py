@@ -324,19 +324,3 @@ def get_config(create=False):
     return CONFIG
 
 
-def get_config_option(option_name: str) -> Any:
-    """Return the value of a configuration option.
-
-    In order of priority, the option is returned from:
-
-    1. The current profile, if loaded and the option specified
-    2. The current configuration, if loaded and the option specified
-    3. The default value for the option
-
-    :param option_name: the name of the option to return
-    :return: the value of the option
-    :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
-    """
-    from aiida.manage import get_manager
-
-    return get_manager().get_option(option_name)

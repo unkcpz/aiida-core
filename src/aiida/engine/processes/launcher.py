@@ -30,7 +30,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :param exception: the exception object
         :param message: string message to use for the log message
         """
-        from aiida.engine import ProcessState
+        from .process import ProcessState
 
         if not node.is_excepted and not node.is_sealed:
             node.logger.exception(message)
