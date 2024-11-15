@@ -113,7 +113,7 @@ class SimplifyDefaultProfiles(SingleMigration):
     up_compatible = 3
 
     def upgrade(self, config: ConfigType) -> None:
-        from aiida.manage.configuration import get_profile
+        from aiida.manage.configuration.profile import get_profile
 
         global_profile = get_profile()
         default_profiles = config.pop('default_profiles', None)

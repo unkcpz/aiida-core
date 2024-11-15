@@ -20,187 +20,31 @@ import contextlib
 import io
 import json
 import os
-import uuid
-from typing import Any, Dict, List, Optional, Tuple
+import warnings
+from typing import Any, Dict, Optional
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    ValidationError,
-    field_serializer,
-    field_validator,
-)
+from pydantic import ValidationError
 
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
-from aiida.common.log import AIIDA_LOGGER, LogLevels
+from aiida.common.log import AIIDA_LOGGER
+from aiida.common.warnings import AiidaDeprecationWarning
 
 from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
+from .schema import ConfigSchema
+
+__all__ = (
+    'get_config',
+    'get_config_option',
+    'get_config_path',
+    'reset_config',
+    'CONFIG',
+)
 
 LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
 
-
-class ConfigVersionSchema(BaseModel, defer_build=True):
-    """Schema for the version configuration of an AiiDA instance."""
-
-    CURRENT: int
-    OLDEST_COMPATIBLE: int
-
-
-class ProfileOptionsSchema(BaseModel, defer_build=True):
-    """Schema for the options of an AiiDA profile."""
-
-    model_config = ConfigDict(use_enum_values=True)
-
-    runner__poll__interval: int = Field(60, description='Polling interval in seconds to be used by process runners.')
-    daemon__default_workers: int = Field(
-        1, description='Default number of workers to be launched by `verdi daemon start`.'
-    )
-    daemon__timeout: int = Field(
-        2,
-        description='Used to set default timeout in the `DaemonClient` for calls to the daemon.',
-    )
-    daemon__worker_process_slots: int = Field(
-        200, description='Maximum number of concurrent process tasks that each daemon worker can handle.'
-    )
-    daemon__recursion_limit: int = Field(3000, description='Maximum recursion depth for the daemon workers.')
-    db__batch_size: int = Field(
-        100000,
-        description='Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL '
-        '(1GB) when creating large numbers of database records in one go.',
-    )
-    verdi__shell__auto_import: str = Field(
-        ':',
-        description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
-    )
-    logging__aiida_loglevel: LogLevels = Field(
-        'REPORT', description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.'
-    )
-    logging__verdi_loglevel: LogLevels = Field(
-        'REPORT', description='Minimum level to log to console when running a `verdi` command.'
-    )
-    logging__disk_objectstore_loglevel: LogLevels = Field(
-        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for `disk_objectstore` logger.'
-    )
-    logging__db_loglevel: LogLevels = Field('REPORT', description='Minimum level to log to the DbLog table.')
-    logging__plumpy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.'
-    )
-    logging__kiwipy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger'
-    )
-    logging__paramiko_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger'
-    )
-    logging__alembic_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger'
-    )
-    logging__sqlalchemy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger'
-    )
-    logging__circus_loglevel: LogLevels = Field(
-        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for the `circus` logger'
-    )
-    logging__aiopika_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `aiopika` logger'
-    )
-    warnings__showdeprecations: bool = Field(True, description='Whether to print AiiDA deprecation warnings.')
-    warnings__rabbitmq_version: bool = Field(
-        True, description='Whether to print a warning when an incompatible version of RabbitMQ is configured.'
-    )
-    transport__task_retry_initial_interval: int = Field(
-        20, description='Initial time interval for the exponential backoff mechanism.'
-    )
-    transport__task_maximum_attempts: int = Field(
-        5, description='Maximum number of transport task attempts before a Process is Paused.'
-    )
-    rmq__task_timeout: int = Field(10, description='Timeout in seconds for communications with RabbitMQ.')
-    storage__sandbox: Optional[str] = Field(
-        None, description='Absolute path to the directory to store sandbox folders.'
-    )
-    caching__default_enabled: bool = Field(False, description='Enable calculation caching by default.')
-    caching__enabled_for: List[str] = Field([], description='Calculation entry points to enable caching on.')
-    caching__disabled_for: List[str] = Field([], description='Calculation entry points to disable caching on.')
-
-    @field_validator('caching__enabled_for', 'caching__disabled_for')
-    @classmethod
-    def validate_caching_identifier_pattern(cls, value: List[str]) -> List[str]:
-        """Validate the caching identifier patterns."""
-        from aiida.manage.caching import _validate_identifier_pattern
-
-        for identifier in value:
-            _validate_identifier_pattern(identifier=identifier, strict=True)
-        return value
-
-
-class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
-    """Schema for the global options of an AiiDA instance."""
-
-    autofill__user__email: Optional[str] = Field(
-        None, description='Default user email to use when creating new profiles.'
-    )
-    autofill__user__first_name: Optional[str] = Field(
-        None, description='Default user first name to use when creating new profiles.'
-    )
-    autofill__user__last_name: Optional[str] = Field(
-        None, description='Default user last name to use when creating new profiles.'
-    )
-    autofill__user__institution: Optional[str] = Field(
-        None, description='Default user institution to use when creating new profiles.'
-    )
-    rest_api__profile_switching: bool = Field(
-        False, description='Toggle whether the profile can be specified in requests submitted to the REST API.'
-    )
-    warnings__development_version: bool = Field(
-        True,
-        description='Whether to print a warning when a profile is loaded while a development version is installed.',
-    )
-
-
-class ProfileStorageConfig(BaseModel, defer_build=True):
-    """Schema for the storage backend configuration of an AiiDA profile."""
-
-    backend: str
-    config: Dict[str, Any]
-
-
-class ProcessControlConfig(BaseModel, defer_build=True):
-    """Schema for the process control configuration of an AiiDA profile."""
-
-    broker_protocol: str = Field('amqp', description='Protocol for connecting to the message broker.')
-    broker_username: str = Field('guest', description='Username for message broker authentication.')
-    broker_password: str = Field('guest', description='Password for message broker.')
-    broker_host: str = Field('127.0.0.1', description='Hostname of the message broker.')
-    broker_port: int = Field(5432, description='Port of the message broker.')
-    broker_virtual_host: str = Field('', description='Virtual host to use for the message broker.')
-    broker_parameters: dict[str, Any] = Field(
-        default_factory=dict, description='Arguments to be encoded as query parameters.'
-    )
-
-
-class ProfileSchema(BaseModel, defer_build=True):
-    """Schema for the configuration of an AiiDA profile."""
-
-    uuid: str = Field(description='A UUID that uniquely identifies the profile.', default_factory=uuid.uuid4)
-    storage: ProfileStorageConfig
-    process_control: ProcessControlConfig
-    default_user_email: Optional[str] = None
-    test_profile: bool = False
-    options: Optional[ProfileOptionsSchema] = None
-
-    @field_serializer('uuid')
-    def serialize_dt(self, value: uuid.UUID, _info):
-        return str(value)
-
-
-class ConfigSchema(BaseModel, defer_build=True):
-    """Schema for the configuration of an AiiDA instance."""
-
-    CONFIG_VERSION: Optional[ConfigVersionSchema] = None
-    profiles: Optional[dict[str, ProfileSchema]] = None
-    options: Optional[GlobalOptionsSchema] = None
-    default_profile: Optional[str] = None
+# global variables for aiida
+CONFIG: Optional['Config'] = None
 
 
 class Config:
@@ -694,7 +538,7 @@ class Config:
 
         return value
 
-    def get_options(self, scope: Optional[str] = None) -> Dict[str, Tuple[Option, str, Any]]:
+    def get_options(self, scope: Optional[str] = None) -> Dict[str, tuple[Option, str, Any]]:
         """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
 
         :param scope: the profile name or globally if not specified
@@ -780,6 +624,135 @@ class Config:
 
             handle.flush()
             os.rename(handle.name, self.filepath)
+
+
+def get_config_path():
+    """Returns path to .aiida configuration directory."""
+    from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
+
+    return os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
+
+
+def load_config(create=False) -> 'Config':
+    """Instantiate Config object representing an AiiDA configuration file.
+
+    Warning: Contrary to :func:`~aiida.manage.configuration.get_config`, this function is uncached and will always
+    create a new Config object. You may want to call :func:`~aiida.manage.configuration.get_config` instead.
+
+    :param create: if True, will create the configuration file if it does not already exist
+    :type create: bool
+
+    :return: the config
+    :rtype: :class:`~aiida.manage.configuration.config.Config`
+    :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
+    """
+    from aiida.common import exceptions
+
+    from .config import Config
+
+    filepath = get_config_path()
+
+    if not os.path.isfile(filepath) and not create:
+        raise exceptions.MissingConfigurationError(f'configuration file {filepath} does not exist')
+
+    try:
+        config = Config.from_file(filepath)
+    except ValueError as exc:
+        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON') from exc
+
+    _merge_deprecated_cache_yaml(config, filepath)
+
+    return config
+
+
+def _merge_deprecated_cache_yaml(config, filepath):
+    """Merge the deprecated cache_config.yml into the config."""
+    cache_path = os.path.join(os.path.dirname(filepath), 'cache_config.yml')
+    if not os.path.exists(cache_path):
+        return
+
+    # Imports are here to avoid them when not needed
+    import shutil
+
+    import yaml
+
+    from aiida.common import timezone
+
+    cache_path_backup = None
+    # Keep generating a new backup filename based on the current time until it does not exist
+    while not cache_path_backup or os.path.isfile(cache_path_backup):
+        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+
+    warnings.warn(
+        'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
+        f'moving to: {cache_path_backup}',
+        AiidaDeprecationWarning,
+        stacklevel=2,
+    )
+
+    with open(cache_path, 'r', encoding='utf8') as handle:
+        cache_config = yaml.safe_load(handle)
+    for profile_name, data in cache_config.items():
+        if profile_name not in config.profile_names:
+            warnings.warn(f"Profile '{profile_name}' from cache_config.yml not in config.json, skipping", UserWarning)
+            continue
+        for key, option_name in [
+            ('default', 'caching.default_enabled'),
+            ('enabled', 'caching.enabled_for'),
+            ('disabled', 'caching.disabled_for'),
+        ]:
+            if key in data:
+                value = data[key]
+                # in case of empty key
+                value = [] if value is None and key != 'default' else value
+                config.set_option(option_name, value, scope=profile_name)
+    config.store()
+    shutil.move(cache_path, cache_path_backup)
+
+
+def reset_config():
+    """Reset the globally loaded config.
+
+    .. warning:: This is experimental functionality and should for now be used only internally. If the reset is unclean
+        weird unknown side-effects may occur that end up corrupting or destroying data.
+    """
+    global CONFIG  # noqa: PLW0603
+    CONFIG = None
+
+
+def get_config(create=False):
+    """Return the current configuration.
+
+    If the configuration has not been loaded yet
+     * the configuration is loaded using ``load_config``
+     * the global `CONFIG` variable is set
+     * the configuration object is returned
+
+    Note: This function will except if no configuration file can be found. Only call this function, if you need
+    information from the configuration file.
+
+    :param create: if True, will create the configuration file if it does not already exist
+    :type create: bool
+
+    :return: the config
+    :rtype: :class:`~aiida.manage.configuration.config.Config`
+    :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+    """
+    global CONFIG  # noqa: PLW0603
+
+    if not CONFIG:
+        CONFIG = load_config(create=create)
+
+        if CONFIG.get_option('warnings.showdeprecations'):
+            # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
+            #   verdi config warnings.showdeprecations False
+            # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
+            warnings.simplefilter('default', AiidaDeprecationWarning)
+            # This should default to 'once', i.e. once per different message
+        else:
+            warnings.simplefilter('ignore', AiidaDeprecationWarning)
+
+    return CONFIG
 
 
 def get_config_option(option_name: str) -> Any:

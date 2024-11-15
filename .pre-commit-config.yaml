@@ -211,11 +211,7 @@ repos:
     language: system
     types: [python]
     require_serial: true
-    args:
-      [
-        "--disable=all", 
-        "--enable=cyclic-import",
-      ]
+    args: [--disable=all, --enable=cyclic-import]
 
   - id: dm-generate-all
     name: Update all requirements files

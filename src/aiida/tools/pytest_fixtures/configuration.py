@@ -111,7 +111,7 @@ def aiida_profile_factory():
         name: str | None = None,
         email: str = 'test@localhost',
     ):
-        from aiida.manage.configuration import create_profile, profile_context
+        from aiida.manage.configuration.profile import create_profile, profile_context
         from aiida.manage.manager import get_manager
 
         manager = get_manager()

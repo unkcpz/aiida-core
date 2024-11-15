@@ -12,8 +12,8 @@ import pytest
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration import get_config, get_config_option
-from aiida.manage.configuration.config import GlobalOptionsSchema
 from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option
+from aiida.manage.configuration.schema import GlobalOptionsSchema
 
 
 @pytest.mark.usefixtures('config_with_profile')

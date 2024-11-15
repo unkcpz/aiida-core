@@ -8,7 +8,7 @@
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -48,7 +48,7 @@ class Option:
 
     @property
     def global_only(self) -> bool:
-        from .config import ProfileOptionsSchema
+        from .schema import ProfileOptionsSchema
 
         return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
 
@@ -61,7 +61,7 @@ class Option:
         """
         from pydantic import ValidationError
 
-        from .config import GlobalOptionsSchema
+        from .schema import GlobalOptionsSchema
 
         attribute = self.name.replace('.', '__')
 
@@ -87,14 +87,14 @@ class Option:
 
 def get_option_names() -> List[str]:
     """Return a list of available option names."""
-    from .config import GlobalOptionsSchema
+    from .schema import GlobalOptionsSchema
 
     return [key.replace('__', '.') for key in GlobalOptionsSchema.model_fields]
 
 
 def get_option(name: str) -> Option:
     """Return option."""
-    from .config import GlobalOptionsSchema
+    from .schema import GlobalOptionsSchema
 
     options = GlobalOptionsSchema.model_fields
     option_name = name.replace('.', '__')
@@ -103,7 +103,7 @@ def get_option(name: str) -> Option:
     return Option(name, GlobalOptionsSchema.model_json_schema()['properties'][option_name], options[option_name])
 
 
-def parse_option(option_name: str, option_value: Any) -> Tuple[Option, Any]:
+def parse_option(option_name: str, option_value: Any) -> tuple[Option, Any]:
     """Parse and validate a value for a configuration option.
 
     :param option_name: the name of the configuration option

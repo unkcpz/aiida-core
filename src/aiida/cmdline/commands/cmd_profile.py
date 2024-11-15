@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -18,7 +20,10 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
-from aiida.manage.configuration import Profile, create_profile, get_config
+from aiida.manage.configuration.config import get_config
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Profile
 
 
 @verdi.group('profile')
@@ -56,6 +61,7 @@ def command_create_profile(
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import docs
+    from aiida.manage.configuration import create_profile
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if not storage_cls.read_only and email is None:

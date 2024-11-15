@@ -57,7 +57,7 @@ Notice how the order in which we pass the arguments is irrelevant because we spe
 Now that we know the difference between positional and named arguments, it is important to realize a python requirement that **positional arguments have to come before named arguments**.
 What this means is that *both* the function definition and function call below are illegal, because there are named arguments before positional ones:
 
-.. include:: include/snippets/functions/signature_plain_python_call_illegal.py
+.. include:: include/snippets/functions/signature_plain_python_call_illegal.illpy
     :code: python
 
 Finally, python knows the concept of ``*args`` and ``**kwargs``, which allow one to define a function that accepts a variable number of positional and keyword arguments (also known as a _variadic_ function).
@@ -190,7 +190,7 @@ This particularly useful when exposing a process function in a wrapping workchai
 The user can now access the input description directly through the spec of the work chain, without having to go to the process function itself.
 For example, in an interactive shell:
 
-.. include:: include/snippets/functions/parse_docstring_expose_ipython.py
+.. include:: include/snippets/functions/parse_docstring_expose_ipython.illpy
     :code: ipython
 
 Return values

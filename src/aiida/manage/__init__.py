@@ -17,11 +17,6 @@
 .. note:: Modules in this sub package may require the database environment to be loaded
 
 """
-
-# AUTO-GENERATED
-
-# fmt: off
-
 from .caching import *
 from .configuration import *
 from .external import *
@@ -47,4 +42,3 @@ __all__ = (
     'upgrade_config',
 )
 
-# fmt: on
