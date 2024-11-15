@@ -322,5 +322,3 @@ def get_config(create=False):
             warnings.simplefilter('ignore', AiidaDeprecationWarning)
 
     return CONFIG
-
-

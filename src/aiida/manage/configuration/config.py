@@ -781,6 +781,7 @@ class Config:
             handle.flush()
             os.rename(handle.name, self.filepath)
 
+
 def get_config_option(option_name: str) -> Any:
     """Return the value of a configuration option.
 
