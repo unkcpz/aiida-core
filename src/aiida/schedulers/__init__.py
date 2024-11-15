@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for classes and utilities to interact with cluster schedulers."""
+
 from .datastructures import *
 from .plugins import *
 from .scheduler import *
@@ -24,4 +25,3 @@ __all__ = (
     'SchedulerError',
     'SchedulerParsingError',
 )
-

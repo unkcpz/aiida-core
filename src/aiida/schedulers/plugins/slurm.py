@@ -13,8 +13,8 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 import re
 
 from aiida.common.lang import type_check
-from aiida.schedulers.scheduler import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
+from aiida.schedulers.scheduler import Scheduler, SchedulerError
 
 from .bash import BashCliScheduler
 

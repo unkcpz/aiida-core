@@ -11,8 +11,8 @@
 from typing import Union
 
 from aiida.common.escaping import escape_for_bash
-from aiida.schedulers.scheduler import SchedulerError, Scheduler
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
+from aiida.schedulers.scheduler import Scheduler, SchedulerError
 
 from .bash import BashCliScheduler
 

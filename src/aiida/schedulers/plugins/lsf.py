@@ -12,8 +12,8 @@ This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 
 from aiida.common.escaping import escape_for_bash
 from aiida.common.extendeddicts import AttributeDict
-from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError, Scheduler
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
+from aiida.schedulers.scheduler import Scheduler, SchedulerError, SchedulerParsingError
 
 from .bash import BashCliScheduler
 
