@@ -205,14 +205,6 @@ repos:
 
       )$
 
-  - id: pylint
-    name: pylint
-    entry: pylint
-    language: system
-    types: [python]
-    require_serial: true
-    args: [--disable=all, --enable=cyclic-import]
-
   - id: dm-generate-all
     name: Update all requirements files
     entry: python ./utils/dependency_management.py generate-all

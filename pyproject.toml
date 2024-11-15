@@ -217,7 +217,6 @@ pre-commit = [
   'sqlalchemy[mypy]~=2.0',
   'tomli',
   'types-PyYAML',
-  'pylint~=3.3'
 ]
 rest = [
   'flask-cors~=3.0',
