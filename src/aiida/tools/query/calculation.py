@@ -83,7 +83,7 @@ class CalculationQueryBuilder:
         :param failed: Boolean to filter only failed processes.
         :return: Dictionary of filters suitable for a QueryBuilder.append() call.
         """
-        from aiida.engine import ProcessState
+        from aiida.engine.processes.process import ProcessState
 
         exit_status_attribute = self.mapper.get_attribute('exit_status')
         process_label_attribute = self.mapper.get_attribute('process_label')
