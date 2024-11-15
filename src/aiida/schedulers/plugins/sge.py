@@ -16,9 +16,8 @@ Email: marco(DOT)dorigo(AT)rub(DOT)de
 import xml.dom.minidom
 import xml.parsers.expat
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.schedulers import SchedulerError, SchedulerParsingError
+from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError, Scheduler
 from aiida.schedulers.datastructures import JobInfo, JobState, ParEnvJobResource
 
 from .bash import BashCliScheduler
@@ -93,7 +92,7 @@ class SgeJobResource(ParEnvJobResource):
 class SgeScheduler(BashCliScheduler):
     """Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)"""
 
-    _logger = aiida.schedulers.Scheduler._logger.getChild('sge')
+    _logger = Scheduler._logger.getChild('sge')
 
     # For SGE, we can have a good qstat xml output by querying by
     # user, but not by job id

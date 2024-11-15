@@ -10,9 +10,8 @@
 
 from typing import Union
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.schedulers import SchedulerError
+from aiida.schedulers.scheduler import SchedulerError, Scheduler
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
 from .bash import BashCliScheduler
@@ -81,7 +80,7 @@ class DirectJobResource(NodeNumberJobResource):
 class DirectScheduler(BashCliScheduler):
     """Support for the direct execution bypassing schedulers."""
 
-    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
+    _logger = Scheduler._logger.getChild('direct')
 
     # Query only by list of jobs and not by user
     _features = {

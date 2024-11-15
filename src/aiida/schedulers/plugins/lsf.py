@@ -10,10 +10,9 @@
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.common.extendeddicts import AttributeDict
-from aiida.schedulers import SchedulerError, SchedulerParsingError
+from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError, Scheduler
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
 from .bash import BashCliScheduler
@@ -175,7 +174,7 @@ class LsfScheduler(BashCliScheduler):
     https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html
     """
 
-    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')
+    _logger = Scheduler._logger.getChild('lsf')
 
     # Query only by list of jobs and not by user
     _features = {

@@ -11,7 +11,7 @@
 import logging
 
 from aiida.common.escaping import escape_for_bash
-from aiida.schedulers import SchedulerError, SchedulerParsingError
+from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobState, MachineInfo, NodeNumberJobResource
 
 from .bash import BashCliScheduler
