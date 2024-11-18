@@ -101,10 +101,27 @@ class DirectScheduler(Scheduler):
         :param working_directory: The absolute filepath to the working directory where the job is to be executed.
         :param filename: The filename of the submission script relative to the working directory.
         """
-        result = self.transport.exec_command_wait(
-            self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
-        )
-        return self._parse_submit_output(*result)
+        submit_script = escape_for_bash(filename)
+        submit_command = f'bash {submit_script} > /dev/null 2>&1 & echo $!'
+
+        self.logger.info(f'submitting with: {submit_command}')
+
+        retval, stdout, stderr = self.transport.exec_command_wait(submit_command, workdir=working_directory)
+
+        if retval != 0:
+            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+
+        if stderr.strip():
+            self.logger.warning(
+                f'in _parse_submit_output for {self.transport!s}: there was some text in stderr: {stderr}'
+            )
+
+        if not stdout.strip():
+            self.logger.debug(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
+
+        return stdout.strip()
 
     def get_jobs(
         self,
@@ -120,38 +137,10 @@ class DirectScheduler(Scheduler):
             returned, where the ``job_id`` is the key and the values are the ``JobInfo`` objects.
         :returns: List of active jobs.
         """
-        with self.transport:
-            retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
+        import re
 
-        joblist = self._parse_joblist_output(retval, stdout, stderr)
-        if as_dict:
-            jobdict = {job.job_id: job for job in joblist}
-            if None in jobdict:
-                raise SchedulerError('Found at least one job without jobid')
-            return jobdict
+        # TODO: in the case of job arrays, decide what to do (i.e., if we want to pass the -t options to list each subjob).
 
-        return joblist
-
-    def kill_job(self, jobid: str) -> bool:
-        """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
-
-        ..note::
-
-            On some schedulers, even if the command is accepted, it may take some seconds for the job to actually
-            disappear from the queue.
-
-        :param jobid: the job ID to be killed
-        :returns: True if everything seems ok, False otherwise.
-        """
-        retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
-        return self._parse_kill_output(retval, stdout, stderr)
-
-    def _get_joblist_command(self, jobs=None, user=None):
-        """The command to report full information on existing jobs.
-
-        TODO: in the case of job arrays, decide what to do (i.e., if we want
-              to pass the -t options to list each subjob).
-        """
         # Using subprocess.Popen with `start_new_session=True` (as done in both local and ssh transport) results in
         # processes without a controlling terminal.
         # The -x option tells ps to include processes which do not have a controlling terminal, which would not be
@@ -169,7 +158,154 @@ class DirectScheduler(Scheduler):
 
         command += '| tail -n +2'  # -header, do not use 'h'
 
-        return command
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(command)
+
+        # FIXME: I am very lenghty, move me into the scheduler parser component
+        # Parsing the output of get job command
+        filtered_stderr = '\n'.join(line for line in stderr.split('\n'))
+        if filtered_stderr.strip():
+            self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
+            if retval != 0:
+                raise SchedulerError('Error during direct execution parsing (_parse_joblist_output function)')
+
+        # Create dictionary and parse specific fields
+        job_list = []
+        for line in stdout.split('\n'):
+            if re.search(r'^\s*PID', line) or line == '':
+                # Skip the header if present
+                continue
+            line = re.sub(r'^\s+', '', line)  # noqa: PLW2901
+            job = re.split(r'\s+', line)
+            this_job = JobInfo()
+            this_job.job_id = job[0]
+
+            if len(job) < 3:
+                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
+
+            try:
+                job_state_string = job[1][0]  # I just check the first character
+            except IndexError:
+                self.logger.debug(f"No 'job_state' field for job id {this_job.job_id}")
+                this_job.job_state = JobState.UNDETERMINED
+            else:
+                try:
+                    this_job.job_state = _MAP_STATUS_PS[job_state_string]
+                except KeyError:
+                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
+                    this_job.job_state = JobState.UNDETERMINED
+
+            try:
+                # I strip the part after the @: is this always ok?
+                this_job.job_owner = job[2]
+            except KeyError:
+                self.logger.debug(f"No 'job_owner' field for job id {this_job.job_id}")
+
+            try:
+                string = job[3]
+                pieces = re.split('[:.]', string)
+                if len(pieces) != 3:
+                    self.logger.warning(f'Wrong number of pieces (expected 3) for time string {string}')
+                    raise ValueError('Wrong number of pieces for time string.')
+
+                days = 0
+                pieces_first = pieces[0].split('-')
+
+                if len(pieces_first) == 2:
+                    days, pieces[0] = pieces_first
+                    days = int(days)
+
+                try:
+                    hours = int(pieces[0])
+                    if hours < 0:
+                        raise ValueError
+                except ValueError:
+                    self.logger.warning(f'Not a valid number of hours: {pieces[0]}')
+                    raise ValueError('Not a valid number of hours.')
+
+                try:
+                    mins = int(pieces[1])
+                    if mins < 0:
+                        raise ValueError
+                except ValueError:
+                    self.logger.warning(f'Not a valid number of minutes: {pieces[1]}')
+                    raise ValueError('Not a valid number of minutes.')
+
+                try:
+                    secs = int(pieces[2])
+                    if secs < 0:
+                        raise ValueError
+                except ValueError:
+                    self.logger.warning(f'Not a valid number of seconds: {pieces[2]}')
+                    raise ValueError('Not a valid number of seconds.')
+
+                this_job.wallclock_time_seconds = days * 86400 + hours * 3600 + mins * 60 + secs
+            except KeyError:
+                # May not have started yet
+                pass
+            except ValueError:
+                self.logger.warning(f"Error parsing 'resources_used.walltime' for job id {this_job.job_id}")
+
+            # I append to the list of jobs to return
+            job_list.append(this_job)
+
+        found_jobs = []
+        found_jobs = [j.job_id for j in job_list]
+
+        # Now check if there are any the user requested but were not found
+        not_found_jobs = list(set(jobs) - set(found_jobs)) if jobs else []
+
+        for job_id in not_found_jobs:
+            job = JobInfo()
+            job.job_id = job_id
+            job.job_state = JobState.DONE
+            # Owner and wallclock time is unknown
+            job_list.append(job)
+
+        return job_list
+
+    def kill_job(self, jobid: str) -> bool:
+        """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
+
+        ..note::
+
+            On some schedulers, even if the command is accepted, it may take some seconds for the job to actually
+            disappear from the queue.
+
+        :param jobid: the job ID to be killed
+        :returns: True if everything seems ok, False otherwise.
+        """
+        from psutil import Process
+
+        # get a list of the process id of all descendants
+        process = Process(int(jobid))
+        children = process.children(recursive=True)
+        jobids = [str(jobid)]
+        jobids.extend([str(child.pid) for child in children])
+        jobids_str = ' '.join(jobids)
+
+        kill_command = f'kill {jobids_str}'
+
+        self.logger.info(f'killing job {jobid}')
+
+        retval, stdout, stderr = self.transport.exec_command_wait(kill_command)
+
+        # parsing the kill command output
+        if retval != 0:
+            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            return False
+
+        if stderr.strip():
+            self.logger.warning(
+                f'in _parse_kill_output for {self.transport!s}: there was some text in stderr: {stderr}'
+            )
+
+        if stdout.strip():
+            self.logger.warning(
+                f'in _parse_kill_output for {self.transport!s}: there was some text in stdout: {stdout}'
+            )
+
+        return True
 
     def _get_submit_script_header(self, job_tmpl):
         """Return the submit script header, using the parameters from the
@@ -237,222 +373,3 @@ class DirectScheduler(Scheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
-        """Return the string to execute to submit a given script.
-
-        .. note:: One needs to redirect stdout and stderr to /dev/null
-           otherwise the daemon remains hanging for the script to run
-
-        :param submit_script: the path of the submit script relative to the working
-            directory.
-            IMPORTANT: submit_script should be already escaped.
-        """
-        submit_command = f'bash {submit_script} > /dev/null 2>&1 & echo $!'
-
-        self.logger.info(f'submitting with: {submit_command}')
-
-        return submit_command
-
-    def _parse_joblist_output(self, retval, stdout, stderr):
-        """Parse the queue output string, as returned by executing the
-        command returned by _get_joblist_command command (qstat -f).
-
-        Return a list of JobInfo objects, one of each job,
-        each relevant parameters implemented.
-
-        .. note:: depending on the scheduler configuration, finished jobs
-            may either appear here, or not.
-            This function will only return one element for each job find
-            in the qstat output; missing jobs (for whatever reason) simply
-            will not appear here.
-        """
-        import re
-
-        filtered_stderr = '\n'.join(line for line in stderr.split('\n'))
-        if filtered_stderr.strip():
-            self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
-            if retval != 0:
-                raise SchedulerError('Error during direct execution parsing (_parse_joblist_output function)')
-
-        # Create dictionary and parse specific fields
-        job_list = []
-        for line in stdout.split('\n'):
-            if re.search(r'^\s*PID', line) or line == '':
-                # Skip the header if present
-                continue
-            line = re.sub(r'^\s+', '', line)  # noqa: PLW2901
-            job = re.split(r'\s+', line)
-            this_job = JobInfo()
-            this_job.job_id = job[0]
-
-            if len(job) < 3:
-                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
-
-            try:
-                job_state_string = job[1][0]  # I just check the first character
-            except IndexError:
-                self.logger.debug(f"No 'job_state' field for job id {this_job.job_id}")
-                this_job.job_state = JobState.UNDETERMINED
-            else:
-                try:
-                    this_job.job_state = _MAP_STATUS_PS[job_state_string]
-                except KeyError:
-                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
-                    this_job.job_state = JobState.UNDETERMINED
-
-            try:
-                # I strip the part after the @: is this always ok?
-                this_job.job_owner = job[2]
-            except KeyError:
-                self.logger.debug(f"No 'job_owner' field for job id {this_job.job_id}")
-
-            try:
-                this_job.wallclock_time_seconds = self._convert_time(job[3])
-            except KeyError:
-                # May not have started yet
-                pass
-            except ValueError:
-                self.logger.warning(f"Error parsing 'resources_used.walltime' for job id {this_job.job_id}")
-
-            # I append to the list of jobs to return
-            job_list.append(this_job)
-
-        return job_list
-
-    def get_jobs(self, jobs=None, user=None, as_dict=False):
-        """Overrides original method from DirectScheduler in order to list
-        missing processes as DONE.
-        """
-        job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=as_dict)
-
-        found_jobs = []
-        # Get the list of known jobs
-        if as_dict:
-            found_jobs = job_stats.keys()
-        else:
-            found_jobs = [j.job_id for j in job_stats]
-        # Now check if there are any the user requested but were not found
-        not_found_jobs = list(set(jobs) - set(found_jobs)) if jobs else []
-
-        for job_id in not_found_jobs:
-            job = JobInfo()
-            job.job_id = job_id
-            job.job_state = JobState.DONE
-            # Owner and wallclock time is unknown
-            if as_dict:
-                job_stats[job_id] = job
-            else:
-                job_stats.append(job)
-
-        return job_stats
-
-    def _convert_time(self, string):
-        """Convert a string in the format HH:MM:SS to a number of seconds."""
-        import re
-
-        pieces = re.split('[:.]', string)
-        if len(pieces) != 3:
-            self.logger.warning(f'Wrong number of pieces (expected 3) for time string {string}')
-            raise ValueError('Wrong number of pieces for time string.')
-
-        days = 0
-        pieces_first = pieces[0].split('-')
-
-        if len(pieces_first) == 2:
-            days, pieces[0] = pieces_first
-            days = int(days)
-
-        try:
-            hours = int(pieces[0])
-            if hours < 0:
-                raise ValueError
-        except ValueError:
-            self.logger.warning(f'Not a valid number of hours: {pieces[0]}')
-            raise ValueError('Not a valid number of hours.')
-
-        try:
-            mins = int(pieces[1])
-            if mins < 0:
-                raise ValueError
-        except ValueError:
-            self.logger.warning(f'Not a valid number of minutes: {pieces[1]}')
-            raise ValueError('Not a valid number of minutes.')
-
-        try:
-            secs = int(pieces[2])
-            if secs < 0:
-                raise ValueError
-        except ValueError:
-            self.logger.warning(f'Not a valid number of seconds: {pieces[2]}')
-            raise ValueError('Not a valid number of seconds.')
-
-        return days * 86400 + hours * 3600 + mins * 60 + secs
-
-    def _parse_submit_output(self, retval, stdout, stderr):
-        """Parse the output of the submit command, as returned by executing the
-        command returned by _get_submit_command command.
-
-        To be implemented by the plugin.
-
-        Return a string with the JobID.
-        """
-        if retval != 0:
-            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
-
-        if stderr.strip():
-            self.logger.warning(
-                f'in _parse_submit_output for {self.transport!s}: there was some text in stderr: {stderr}'
-            )
-
-        if not stdout.strip():
-            self.logger.debug(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
-
-        return stdout.strip()
-
-    def _get_kill_command(self, jobid: Union[int, str]) -> str:
-        """Return the command to kill the process with specified id and all its descendants.
-
-        :param jobid: The job id is in the case of the
-                :py:class:`~aiida.schedulers.plugins.direct.DirectScheduler` the process id.
-
-        :return: A string containing the kill command.
-        """
-        from psutil import Process
-
-        # get a list of the process id of all descendants
-        process = Process(int(jobid))
-        children = process.children(recursive=True)
-        jobids = [str(jobid)]
-        jobids.extend([str(child.pid) for child in children])
-        jobids_str = ' '.join(jobids)
-
-        kill_command = f'kill {jobids_str}'
-
-        self.logger.info(f'killing job {jobid}')
-
-        return kill_command
-
-    def _parse_kill_output(self, retval, stdout, stderr):
-        """Parse the output of the kill command.
-
-        To be implemented by the plugin.
-
-        :return: True if everything seems ok, False otherwise.
-        """
-        if retval != 0:
-            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            return False
-
-        if stderr.strip():
-            self.logger.warning(
-                f'in _parse_kill_output for {self.transport!s}: there was some text in stderr: {stderr}'
-            )
-
-        if stdout.strip():
-            self.logger.warning(
-                f'in _parse_kill_output for {self.transport!s}: there was some text in stdout: {stdout}'
-            )
-
-        return True
