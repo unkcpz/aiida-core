@@ -17,7 +17,6 @@ from .plugins import *
 from .scheduler import *
 
 __all__ = (
-    'BashCliScheduler',
     'JobInfo',
     'JobResource',
     'JobState',

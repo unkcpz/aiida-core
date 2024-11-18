@@ -12,9 +12,9 @@ import logging
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.schedulers.datastructures import JobInfo, JobState, MachineInfo, NodeNumberJobResource
-
-from .bash import BashCliScheduler
+from aiida.schedulers.scheduler import Scheduler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class PbsJobResource(NodeNumberJobResource):
         return resources
 
 
-class PbsBaseClass(BashCliScheduler):
+class PbsBaseClass(Scheduler):
     """Base class with support for the PBSPro scheduler
 
     (http://www.pbsworks.com/) and for PBS and Torque

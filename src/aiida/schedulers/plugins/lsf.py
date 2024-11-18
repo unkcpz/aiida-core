@@ -15,8 +15,9 @@ from aiida.common.escaping import escape_for_bash
 from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
+from aiida.engine.processes.exit_code import ExitCode
+from aiida.schedulers.scheduler import Scheduler
 
-from .bash import BashCliScheduler
 
 # This maps LSF status codes to our own state list
 #
@@ -169,7 +170,7 @@ class LsfJobResource(JobResource):
         return False
 
 
-class LsfScheduler(BashCliScheduler):
+class LsfScheduler(Scheduler):
     """Support for the IBM LSF scheduler
 
     https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html
@@ -257,6 +258,57 @@ class LsfScheduler(BashCliScheduler):
         'submit_time',  # submission time (date followed by hours:minutes)
         'name',  # job name
     ]
+
+    def submit_job(self, working_directory: str, filename: str) -> str | ExitCode:
+        """Submit a job.
+
+        :param working_directory: The absolute filepath to the working directory where the job is to be executed.
+        :param filename: The filename of the submission script relative to the working directory.
+        """
+        result = self.transport.exec_command_wait(
+            self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
+        )
+        return self._parse_submit_output(*result)
+
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: bool = False,
+    ) -> list[JobInfo] | dict[str, JobInfo]:
+        """Return the list of currently active jobs.
+
+        :param jobs: A list of jobs to check; only these are checked.
+        :param user: A string with a user: only jobs of this user are checked.
+        :param as_dict: If ``False`` (default), a list of ``JobInfo`` objects is returned. If ``True``, a dictionary is
+            returned, where the ``job_id`` is the key and the values are the ``JobInfo`` objects.
+        :returns: List of active jobs.
+        """
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
+
+        joblist = self._parse_joblist_output(retval, stdout, stderr)
+        if as_dict:
+            jobdict = {job.job_id: job for job in joblist}
+            if None in jobdict:
+                raise SchedulerError('Found at least one job without jobid')
+            return jobdict
+
+        return joblist
+
+    def kill_job(self, jobid: str) -> bool:
+        """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
+
+        ..note::
+
+            On some schedulers, even if the command is accepted, it may take some seconds for the job to actually
+            disappear from the queue.
+
+        :param jobid: the job ID to be killed
+        :returns: True if everything seems ok, False otherwise.
+        """
+        retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
+        return self._parse_kill_output(retval, stdout, stderr)
 
     def _get_joblist_command(self, jobs=None, user=None):
         """The command to report full information on existing jobs.
