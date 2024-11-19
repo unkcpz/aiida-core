@@ -12,6 +12,7 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 
 import re
 
+from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.engine.processes.exit_code import ExitCode
@@ -182,10 +183,16 @@ class SlurmScheduler(Scheduler):
         :param working_directory: The absolute filepath to the working directory where the job is to be executed.
         :param filename: The filename of the submission script relative to the working directory.
         """
-        result = self.transport.exec_command_wait(
-            self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
-        )
-        return self._parse_submit_output(*result)
+        from aiida.engine import CalcJob
+
+        submit_script = escape_for_bash(filename)
+        submit_command = f'sbatch {submit_script}'
+
+        self.logger.info(f'submitting with: {submit_command}')
+
+        retval, stdout, stderr = self.transport.exec_command_wait(submit_command, workdir=working_directory)
+
+        return self.parse_submit_output(retval, stdout, stdout)
 
     def get_jobs(
         self,
@@ -201,10 +208,12 @@ class SlurmScheduler(Scheduler):
             returned, where the ``job_id`` is the key and the values are the ``JobInfo`` objects.
         :returns: List of active jobs.
         """
-        with self.transport:
-            retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
+        command = self.get_joblist_command(jobs=jobs, user=user)
 
-        joblist = self._parse_joblist_output(retval, stdout, stderr)
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(command)
+
+        joblist = self.parse_joblist_output(retval, stdout, stderr)
         if as_dict:
             jobdict = {job.job_id: job for job in joblist}
             if None in jobdict:
@@ -224,10 +233,70 @@ class SlurmScheduler(Scheduler):
         :param jobid: the job ID to be killed
         :returns: True if everything seems ok, False otherwise.
         """
-        retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
-        return self._parse_kill_output(retval, stdout, stderr)
+        command = f'scancel {jobid}'
 
-    def _get_joblist_command(self, jobs=None, user=None):
+        self.logger.info(f'killing job {jobid}')
+
+        retval, stdout, stderr = self.transport.exec_command_wait(command)
+
+        if retval != 0:
+            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            return False
+
+        try:
+            transport_string = f' for {self.transport}'
+        except SchedulerError:
+            transport_string = ''
+
+        if stderr.strip():
+            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stderr: {stderr}')
+
+        if stdout.strip():
+            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stdout: {stdout}')
+
+        return True
+
+    def parse_submit_output(self, retval, stdout, stderr):
+        """Parse the output of the submit command, as returned by executing the
+        command returned by _get_submit_command command.
+
+        To be implemented by the plugin.
+
+        Return a string with the JobID.
+        """
+        from aiida.engine import CalcJob
+
+        if retval != 0:
+            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+
+            if 'Invalid account' in stderr:
+                return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT
+
+            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+
+        try:
+            transport_string = f' for {self.transport}'
+        except SchedulerError:
+            transport_string = ''
+
+        if stderr.strip():
+            self.logger.warning(f'in _parse_submit_output{transport_string}: there was some text in stderr: {stderr}')
+
+        # I check for a valid string in the output.
+        # See comments near the regexp above.
+        # I check for the first line that matches.
+        for line in stdout.split('\n'):
+            match = _SLURM_SUBMITTED_REGEXP.match(line.strip())
+            if match:
+                return match.group('jobid')
+        # If I am here, no valid line could be found.
+        self.logger.error(f'in _parse_submit_output{transport_string}: unable to find the job id: {stdout}')
+
+        raise SchedulerError(
+            'Error during submission, could not retrieve the jobID from ' 'sbatch output; see log for more info.'
+        )
+
+    def get_joblist_command(self, jobs=None, user=None):
         """The command to report full information on existing jobs.
 
         Separate the fields with the _field_separator string order:
@@ -434,61 +503,7 @@ class SlurmScheduler(Scheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
-        """Return the string to execute to submit a given script.
-
-        Args:
-        -----
-            submit_script: the path of the submit script relative to the working
-                directory.
-                IMPORTANT: submit_script should be already escaped.
-        """
-        submit_command = f'sbatch {submit_script}'
-
-        self.logger.info(f'submitting with: {submit_command}')
-
-        return submit_command
-
-    def _parse_submit_output(self, retval, stdout, stderr):
-        """Parse the output of the submit command, as returned by executing the
-        command returned by _get_submit_command command.
-
-        To be implemented by the plugin.
-
-        Return a string with the JobID.
-        """
-        from aiida.engine import CalcJob
-
-        if retval != 0:
-            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-
-            if 'Invalid account' in stderr:
-                return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT
-
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
-
-        try:
-            transport_string = f' for {self.transport}'
-        except SchedulerError:
-            transport_string = ''
-
-        if stderr.strip():
-            self.logger.warning(f'in _parse_submit_output{transport_string}: there was some text in stderr: {stderr}')
-
-        # I check for a valid string in the output.
-        # See comments near the regexp above.
-        # I check for the first line that matches.
-        for line in stdout.split('\n'):
-            match = _SLURM_SUBMITTED_REGEXP.match(line.strip())
-            if match:
-                return match.group('jobid')
-        # If I am here, no valid line could be found.
-        self.logger.error(f'in _parse_submit_output{transport_string}: unable to find the job id: {stdout}')
-        raise SchedulerError(
-            'Error during submission, could not retrieve the jobID from ' 'sbatch output; see log for more info.'
-        )
-
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def parse_joblist_output(self, retval, stdout, stderr):
         """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command,
         that is here implemented as a list of lines, one for each
@@ -708,38 +723,6 @@ stderr='{stderr.strip()}'"""
         # the seconds since epoch, as suggested on stackoverflow:
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
-
-    def _get_kill_command(self, jobid):
-        """Return the command to kill the job with specified jobid."""
-        submit_command = f'scancel {jobid}'
-
-        self.logger.info(f'killing job {jobid}')
-
-        return submit_command
-
-    def _parse_kill_output(self, retval, stdout, stderr):
-        """Parse the output of the kill command.
-
-        To be implemented by the plugin.
-
-        :return: True if everything seems ok, False otherwise.
-        """
-        if retval != 0:
-            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            return False
-
-        try:
-            transport_string = f' for {self.transport}'
-        except SchedulerError:
-            transport_string = ''
-
-        if stderr.strip():
-            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stderr: {stderr}')
-
-        if stdout.strip():
-            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stdout: {stdout}')
-
-        return True
 
     def parse_output(self, detailed_job_info=None, stdout=None, stderr=None):
         """Parse the output of the scheduler.

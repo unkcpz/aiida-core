@@ -69,19 +69,19 @@ def test_resource_validation():
 
 
 class TestParserSqueue(unittest.TestCase):
-    """Tests to verify if the function _parse_joblist_output behave correctly
+    """Tests to verify if the function parse_joblist_output behave correctly
     The tests is done parsing a string defined above, to be used offline
     """
 
     def test_parse_common_joblist_output(self):
-        """Test whether _parse_joblist_output can parse the squeue output"""
+        """Test whether parse_joblist_output can parse the squeue output"""
         scheduler = SlurmScheduler()
 
         retval = 0
         stdout = TEXT_SQUEUE_TO_TEST
         stderr = ''
 
-        job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
+        job_list = scheduler.parse_joblist_output(retval, stdout, stderr)
         job_dict = {j.job_id: j for j in job_list}
 
         # The parameters are hard coded in the text to parse
@@ -130,16 +130,16 @@ class TestParserSqueue(unittest.TestCase):
         #                self.assertTrue( j.num_mpiprocs==num_mpiprocs )
 
     def test_parse_failed_squeue_output(self):
-        """Test that _parse_joblist_output reacts as expected to failures."""
+        """Test that parse_joblist_output reacts as expected to failures."""
         scheduler = SlurmScheduler()
 
         # non-zero return value should raise
         with pytest.raises(SchedulerError, match='squeue returned exit code 1'):
-            scheduler._parse_joblist_output(1, TEXT_SQUEUE_TO_TEST, '')
+            scheduler.parse_joblist_output(1, TEXT_SQUEUE_TO_TEST, '')
 
         # non-empty stderr should be logged
         with self.assertLogs(scheduler.logger, logging.WARNING):
-            scheduler._parse_joblist_output(0, TEXT_SQUEUE_TO_TEST, 'error message')
+            scheduler.parse_joblist_output(0, TEXT_SQUEUE_TO_TEST, 'error message')
 
 
 @pytest.mark.parametrize(
@@ -448,14 +448,14 @@ class TestJoblistCommand:
         """Test that asking for a single job results in duplication of the list."""
         scheduler = SlurmScheduler()
 
-        command = scheduler._get_joblist_command(jobs=['123'])
+        command = scheduler.get_joblist_command(jobs=['123'])
         assert '123,123' in command
 
     def test_joblist_multi(self):
         """Test that asking for multiple jobs does not result in duplications."""
         scheduler = SlurmScheduler()
 
-        command = scheduler._get_joblist_command(jobs=['123', '456'])
+        command = scheduler.get_joblist_command(jobs=['123', '456'])
         assert '123,456' in command
         assert '456,456' not in command
 
@@ -517,8 +517,8 @@ def test_parse_output_valid():
 
 
 def test_parse_submit_output_invalid_account():
-    """Test ``SlurmScheduler._parse_submit_output`` returns exit code if stderr contains error about invalid account."""
+    """Test ``SlurmScheduler.parse_submit_output`` returns exit code if stderr contains error about invalid account."""
     scheduler = SlurmScheduler()
     stderr = 'Batch job submission failed: Invalid account or account/partition combination specified'
-    result = scheduler._parse_submit_output(1, '', stderr)
+    result = scheduler.parse_submit_output(1, '', stderr)
     assert result == CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT
