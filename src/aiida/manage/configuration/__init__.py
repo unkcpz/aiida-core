@@ -57,7 +57,6 @@ from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
     from aiida.orm import User
-
     from .config import Config
 
 # global variables for aiida
