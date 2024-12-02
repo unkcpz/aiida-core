@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import collections
 import concurrent
+import functools
 import typing as t
 
 import kiwipy
 from kiwipy import communications
 from plumpy.futures import unwrap_kiwi_future
+from plumpy.utils import PID_TYPE
 
 from aiida.brokers import Broker
 from aiida.common.exceptions import AiidaException
@@ -164,7 +166,8 @@ def pause_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.pause_process, 'pause', 'pausing', timeout, wait, msg=message)
+    action = functools.partial(controller.pause_process, msg=message)
+    _perform_actions(processes, action, 'pause', 'pausing', timeout, wait)
 
 
 def kill_processes(
@@ -173,6 +176,7 @@ def kill_processes(
     message: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
+    force: bool = False,
     wait: bool = False,
 ) -> None:
     """Kill running processes.
@@ -199,22 +203,23 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message)
+    action = functools.partial(controller.kill_process, msg=message, force=force)
+    _perform_actions(processes, action, 'kill', 'killing', timeout, wait)
 
 
 def _perform_actions(
     processes: list[ProcessNode],
-    action: t.Callable,
+    action: t.Callable[[PID_TYPE], kiwipy.Future],
     infinitive: str,
     present: str,
     timeout: t.Optional[float] = None,
     wait: bool = False,
     **kwargs: t.Any,
 ) -> None:
-    """Perform an action on a list of processes.
+    """Perform an action on a list of processes pks.
 
     :param processes: The list of processes to perform the action on.
-    :param action: The action to perform.
+    :param action: The action to perform on the pk of processes.
     :param infinitive: The infinitive of the verb that represents the action.
     :param present: The present tense of the verb that represents the action.
     :param past: The past tense of the verb that represents the action.
@@ -241,7 +246,7 @@ def _perform_actions(
 
 
 def _resolve_futures(
-    futures: dict[concurrent.futures.Future, ProcessNode],
+    futures: dict[kiwipy.Future, ProcessNode],
     infinitive: str,
     present: str,
     wait: bool = False,
