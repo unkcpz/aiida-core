@@ -320,7 +320,8 @@ class Process(PlumpyProcess):
         else:
             self._runner = manager.get_manager().get_runner()
 
-        load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
+        # XXX: worth to check and improve debugger, if coordinator argument name is incorrect, the process is unreachable but no erorr message
+        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=self._runner.communicator)
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
