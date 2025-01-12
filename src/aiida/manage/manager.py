@@ -284,7 +284,13 @@ class Manager:
 
         return self._profile_storage
 
-    def get_broker(self) -> 'Broker' | None:
+    def get_broker(self, loop=None) -> 'Broker | None':
+        if self._broker is not None:
+            return self._broker
+
+        return self.create_broker(loop)
+
+    def create_broker(self, loop) -> 'Broker | None':
         """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
@@ -306,7 +312,7 @@ class Manager:
                 entry_point = 'core.rabbitmq'
 
             broker_cls = BrokerFactory(entry_point)
-            self._broker = broker_cls(self._profile)
+            self._broker = broker_cls(self._profile, loop)
 
         return self._broker
 
@@ -339,7 +345,7 @@ class Manager:
                 f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
             )
 
-        return broker.get_communicator()
+        return broker.get_coordinator()
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.

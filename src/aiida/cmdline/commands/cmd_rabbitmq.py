@@ -20,6 +20,7 @@ import wrapt
 from aiida.cmdline.commands.cmd_devel import verdi_devel
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, echo_tabulate
+from aiida.manage.manager import Manager
 
 if t.TYPE_CHECKING:
     import requests
@@ -131,7 +132,7 @@ def with_client(ctx, wrapped, _, args, kwargs):
 
 @cmd_rabbitmq.command('server-properties')
 @decorators.with_manager
-def cmd_server_properties(manager):
+def cmd_server_properties(manager: Manager):
     """List the server properties."""
     import yaml
 
