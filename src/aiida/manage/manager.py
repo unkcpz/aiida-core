@@ -10,11 +10,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
-    import asyncio
-
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.rmq import RemoteProcessThreadController
 
