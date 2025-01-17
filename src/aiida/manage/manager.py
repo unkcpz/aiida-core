@@ -10,13 +10,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
-    import asyncio
-
     from kiwipy.rmq import RmqThreadCommunicator
-    from plumpy.process_comms import RemoteProcessThreadController
+    from plumpy.rmq import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
     from aiida.engine.daemon.client import DaemonClient
@@ -369,7 +368,7 @@ class Manager:
         :return: the process controller instance
 
         """
-        from plumpy.process_comms import RemoteProcessThreadController
+        from plumpy.rmq import RemoteProcessThreadController
 
         if self._process_controller is None:
             self._process_controller = RemoteProcessThreadController(self.get_communicator())

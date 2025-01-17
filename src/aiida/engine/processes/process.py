@@ -39,9 +39,11 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
+# XXX: remove me
 from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
-from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
+# XXX: remove me
+from aio_pika.exceptions import ConnectionClosed
 from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
@@ -178,7 +180,7 @@ class Process(PlumpyProcess):
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
-            communicator=self._runner.communicator,
+            coordinator=self._runner.communicator,
         )
 
         self._node: Optional[orm.ProcessNode] = None
@@ -318,7 +320,8 @@ class Process(PlumpyProcess):
         else:
             self._runner = manager.get_manager().get_runner()
 
-        load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
+        # XXX: worth to check and improve debugger, if coordinator argument name is incorrect, the process is unreachable but no erorr message
+        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=self._runner.communicator)
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
@@ -363,7 +366,7 @@ class Process(PlumpyProcess):
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
-                kill_future = plumpy.futures.gather(*killing)
+                kill_future = asyncio.gather(*killing)
                 result = self.loop.create_future()
 
                 def done(done_future: plumpy.futures.Future):
