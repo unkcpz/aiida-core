@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import functools
 import logging
 import tempfile
-import concurrent.futures
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import plumpy

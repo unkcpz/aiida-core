@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from plumpy.coordinator import Coordinator
@@ -314,7 +313,7 @@ class Manager:
                 entry_point = 'core.rabbitmq'
 
             broker_cls = BrokerFactory(entry_point)
-            self._broker = broker_cls(self._profile, loop)
+            self._broker = broker_cls(self._profile)
 
         return self._broker
 

@@ -39,11 +39,13 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
+
+# XXX: remove me
+from aio_pika.exceptions import ConnectionClosed
+
 # XXX: remove me
 from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
-# XXX: remove me
-from aio_pika.exceptions import ConnectionClosed
 from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 

@@ -7,6 +7,8 @@ from plumpy.controller import ProcessController
 if TYPE_CHECKING:
     from plumpy.coordinator import Coordinator
 
+    from aiida.manage.configuration.profile import Profile
+
 
 __all__ = ('Broker',)
 
@@ -14,6 +16,8 @@ __all__ = ('Broker',)
 @runtime_checkable
 class Broker(Protocol):
     """Interface for a message broker that facilitates communication with and between process runners."""
+
+    def __init__(self, profile: 'Profile') -> None: ...
 
     @property
     def coordinator(self) -> 'Coordinator':
