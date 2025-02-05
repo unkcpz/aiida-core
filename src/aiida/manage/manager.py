@@ -426,9 +426,9 @@ class Manager:
         settings = {'broker_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
 
-        if 'coordinator' not in settings:
+        if 'broker' not in settings:
             try:
-                settings['coordinator'] = self.get_coordinator()
+                settings['broker'] = self.get_broker()
             except ConfigurationError:
                 # The currently loaded profile does not define a broker and so there is no coordinator
                 pass
