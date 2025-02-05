@@ -426,49 +426,17 @@ class Manager:
         settings = {'broker_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
 
-        if 'communicator' not in settings:
-            # Only call get_communicator if we have to as it will lazily create
+        if 'coordinator' not in settings:
             try:
-                settings['communicator'] = self.get_coordinator()
+                settings['coordinator'] = self.get_coordinator()
             except ConfigurationError:
-                # The currently loaded profile does not define a broker and so there is no communicator
+                # The currently loaded profile does not define a broker and so there is no coordinator
                 pass
 
         if with_persistence and 'persister' not in settings:
             settings['persister'] = self.get_persister()
 
         return runners.Runner(**settings)  # type: ignore[arg-type]
-
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
-        """Create and return a new daemon runner.
-
-        This is used by workers when the daemon is running and in testing.
-
-        :param loop: the (optional) asyncio event loop to use
-
-        :return: a runner configured to work in the daemon configuration
-
-        """
-        from plumpy.persistence import LoadSaveContext
-
-        from aiida.engine import persistence
-        from aiida.engine.processes.launcher import ProcessLauncher
-
-        runner = self.create_runner(broker_submit=True, loop=loop)
-        runner_loop = runner.loop
-
-        # Listen for incoming launch requests
-        task_receiver = ProcessLauncher(
-            loop=runner_loop,
-            persister=self.get_persister(),
-            load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader(),
-        )
-
-        assert runner.communicator is not None, 'communicator not set for runner'
-        runner.communicator.add_task_subscriber(task_receiver)
-
-        return runner
 
     def check_version(self):
         """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.

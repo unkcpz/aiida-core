@@ -22,6 +22,9 @@ class RmqLoopCoordinator(Generic[U]):
         """The inner communicator."""
         return self._comm
 
+    def set_loop(self, loop):
+        self._loop = loop
+
     def add_rpc_subscriber(self, subscriber, identifier=None):
         subscriber = convert_to_comm(subscriber, self._loop)
         return self._comm.add_rpc_subscriber(subscriber, identifier)
