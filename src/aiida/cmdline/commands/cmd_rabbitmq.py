@@ -137,7 +137,7 @@ def cmd_server_properties(manager: Manager):
     import yaml
 
     data = {}
-    for key, value in manager.get_communicator().server_properties.items():
+    for key, value in manager.get_coordinator().server_properties.items():
         data[key] = value.decode('utf-8') if isinstance(value, bytes) else value
     click.echo(yaml.dump(data, indent=4))
 

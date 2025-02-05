@@ -59,8 +59,8 @@ class Manager:
 
     3. A single storage backend object for the profile, to connect to data storage resources
     5. A single daemon client object for the profile, to connect to the AiiDA daemon
-    4. A single communicator object for the profile, to connect to the process control resources
-    6. A single process controller object for the profile, which uses the communicator to control process tasks
+    4. A single coordinator object for the profile, to connect to the process control resources
+    6. A single process controller object for the profile, which uses the coordinator to control process tasks
     7. A single runner object for the profile, which uses the process controller to start and stop processes
     8. A single persister object for the profile, which can persist running processes to the profile storage
 
@@ -167,7 +167,7 @@ class Manager:
         self._profile_storage = None
 
     def reset_broker(self) -> None:
-        """Reset the communicator."""
+        """Reset the coordinator."""
         from concurrent import futures
 
         if self._broker is not None:
@@ -332,9 +332,9 @@ class Manager:
         return self._persister
 
     def get_coordinator(self) -> Coordinator:
-        """Return the communicator
+        """Return the coordinator
 
-        :return: a global communicator instance
+        :return: a global coordinator instance
         """
         from aiida.common import ConfigurationError
 
@@ -343,7 +343,7 @@ class Manager:
         if broker is None:
             assert self._profile is not None
             raise ConfigurationError(
-                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
+                f'profile `{self._profile.name}` does not provide a coordinator because it does not define a broker'
             )
 
         return broker.coordinator

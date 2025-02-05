@@ -539,10 +539,9 @@ def backend(manager):
     return manager.get_profile_storage()
 
 
-# FIXME: coordinator
 @pytest.fixture
-def communicator(manager):
-    """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
+def coordinator(manager):
+    """Get the ``Coordinator`` instance of the currently loaded profile to coordinator with RabbitMQ."""
     return manager.get_coordinator()
 
 
