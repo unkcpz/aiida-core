@@ -332,7 +332,7 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg_text: str | None = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None) -> Union[bool, asyncio.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
@@ -369,7 +369,7 @@ class Process(PlumpyProcess):
                 kill_future = asyncio.gather(*killing)
                 result = self.loop.create_future()
 
-                def done(done_future: plumpy.futures.Future):
+                def done(done_future: asyncio.Future):
                     is_all_killed = all(done_future.result())
                     result.set_result(is_all_killed)
 

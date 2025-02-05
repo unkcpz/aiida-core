@@ -446,7 +446,7 @@ class Waiting(plumpy.process_states.Waiting):
         """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
         self._task: InterruptableFuture | None = None
-        self._killing: plumpy.futures.Future | None = None
+        self._killing: asyncio.Future | None = None
         self._command: Callable[..., Any] | None = None
         self._monitor_result: CalcJobMonitorResult | None = None
         self._monitors: CalcJobMonitors | None = None
@@ -663,14 +663,14 @@ class Waiting(plumpy.process_states.Waiting):
             ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder, exit_code
         )
 
-    def interrupt(self, reason: Any) -> Optional[plumpy.futures.Future]:  # type: ignore[override]
+    def interrupt(self, reason: Any) -> Optional[asyncio.Future]:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)
 
         if isinstance(reason, plumpy.process_states.KillInterruption):
             if self._killing is None:
-                self._killing = plumpy.futures.Future()
+                self._killing = asyncio.Future()
             return self._killing
 
         return None
