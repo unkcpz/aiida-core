@@ -31,4 +31,4 @@ def test_disconnect():
     result, node = add_calcfunction.run_get_node(1)
     assert node.is_finished_ok
     assert result == 2
-    # manager.reset_profile()  # This hangs before timing out
+    manager.reset_profile()  # This hangs before timing out

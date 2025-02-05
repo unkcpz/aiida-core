@@ -174,13 +174,13 @@ class Process(PlumpyProcess):
         from aiida.manage import manager
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
-        # assert self._runner.communicator is not None, 'communicator not set for runner'
+        # assert self._runner.coordinator is not None, 'coordinator not set for runner'
 
         super().__init__(
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
-            coordinator=self._runner.communicator,
+            coordinator=self._runner.coordinator,
         )
 
         self._node: Optional[orm.ProcessNode] = None
@@ -321,7 +321,7 @@ class Process(PlumpyProcess):
             self._runner = manager.get_manager().get_runner()
 
         # XXX: worth to check and improve debugger, if coordinator argument name is incorrect, the process is unreachable but no erorr message
-        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=self._runner.communicator)
+        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=self._runner.coordinator)
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
