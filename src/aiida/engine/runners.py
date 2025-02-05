@@ -20,9 +20,9 @@ from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
 from plumpy.coordinator import Coordinator
-from plumpy.rmq import RemoteProcessThreadController
 from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
+from plumpy.rmq import RemoteProcessThreadController
 
 from aiida.brokers.broker import Broker
 from aiida.common import exceptions
@@ -94,7 +94,9 @@ class Runner:
         if broker is not None:
             self._coordinator = broker.coordinator
             self._controller = broker.controller
-            self._coordinator.set_loop(self._loop) # FIXME: how to do this properly to align the loop of coordinator and runner
+            self._coordinator.set_loop(
+                self._loop
+            )  # FIXME: how to do this properly to align the loop of coordinator and runner
         elif self._broker_submit:
             LOGGER.warning('Disabling broker submission, no coordinator provided')
             self._broker_submit = False

@@ -8,7 +8,6 @@ import typing as t
 from plumpy import ProcessController
 from plumpy.rmq import RemoteProcessThreadController
 
-from aiida.brokers.broker import Broker
 from aiida.brokers.rabbitmq.coordinator import RmqLoopCoordinator
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
@@ -28,7 +27,7 @@ __all__ = ('RabbitmqBroker',)
 class RabbitmqBroker:
     """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
 
-    def __init__(self, profile: Profile, loop=None) -> None:
+    def __init__(self, profile: Profile) -> None:
         """Construct a new instance.
 
         :param profile: The profile.
@@ -36,7 +35,9 @@ class RabbitmqBroker:
         self._profile = profile
         self._communicator: 'RmqThreadCommunicator | None' = None
         self._prefix = f'aiida-{self._profile.uuid}'
-        self._coordinator = self._create_coordinator(loop)
+
+        # init coordinator without loop, since the loop is set after by runner.
+        self._coordinator = self._create_coordinator()
 
         # Check whether a compatible version of RabbitMQ is being used.
         self.check_rabbitmq_version()
@@ -62,7 +63,7 @@ class RabbitmqBroker:
     def coordinator(self):
         return self._coordinator
 
-    def _create_coordinator(self, loop):
+    def _create_coordinator(self, loop=None):
         self._communicator = self._create_communicator()
         coordinator = RmqLoopCoordinator(self._communicator, loop)
 
