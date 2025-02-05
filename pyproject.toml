@@ -519,5 +519,5 @@ commands = molecule {posargs:test}
 required-version = ">=0.5.21"
 
 [tool.uv.sources]
-plumpy = { path = "../plumpy", editable = true }
-# plumpy = { git = "https://github.com/unkcpz/plumpy", branch = "master" }
+# plumpy = { path = "../plumpy", editable = true }
+plumpy = { git = "https://github.com/unkcpz/plumpy", branch = "fork" }
