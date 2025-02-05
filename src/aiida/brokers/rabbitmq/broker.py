@@ -25,7 +25,7 @@ LOGGER = AIIDA_LOGGER.getChild('broker.rabbitmq')
 __all__ = ('RabbitmqBroker',)
 
 
-class RabbitmqBroker(Broker):
+class RabbitmqBroker:
     """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
 
     def __init__(self, profile: Profile, loop=None) -> None:
@@ -36,8 +36,10 @@ class RabbitmqBroker(Broker):
         self._profile = profile
         self._communicator: 'RmqThreadCommunicator | None' = None
         self._prefix = f'aiida-{self._profile.uuid}'
-        self._coordinator = None
-        self._loop = loop
+        self._coordinator = self._create_coordinator(loop)
+
+        # Check whether a compatible version of RabbitMQ is being used.
+        self.check_rabbitmq_version()
 
     def __str__(self):
         try:
@@ -53,28 +55,22 @@ class RabbitmqBroker(Broker):
 
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
-        for task in self.get_coordinator().communicator.task_queue(get_launch_queue_name(self._prefix)):
+        for task in self.coordinator.communicator.task_queue(get_launch_queue_name(self._prefix)):
             yield task
 
-    def get_coordinator(self):
-        # FIXME: better to explicitly create
-        if self._coordinator is not None:
-            return self._coordinator
+    @property
+    def coordinator(self):
+        return self._coordinator
 
-        return self.create_coordinator()
-
-    def create_coordinator(self):
-        if self._communicator is None:
-            self._communicator = self._create_communicator()
-            # Check whether a compatible version of RabbitMQ is being used.
-            self.check_rabbitmq_version()
-
-        coordinator = RmqLoopCoordinator(self._communicator, self._loop)
+    def _create_coordinator(self, loop):
+        self._communicator = self._create_communicator()
+        coordinator = RmqLoopCoordinator(self._communicator, loop)
 
         return coordinator
 
-    def get_controller(self) -> ProcessController:
-        coordinator = self.get_coordinator()
+    @property
+    def controller(self) -> ProcessController:
+        coordinator = self.coordinator
         return RemoteProcessThreadController(coordinator)
 
     def _create_communicator(self) -> 'RmqThreadCommunicator':
@@ -141,5 +137,4 @@ class RabbitmqBroker(Broker):
         """
         from packaging.version import parse
 
-        return parse(self.get_coordinator().communicator.server_properties['version'])
-
+        return parse(self.coordinator.communicator.server_properties['version'])

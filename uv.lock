@@ -24,7 +24,6 @@ wheels = [
 
 [[package]]
 name = "aiida-core"
-version = "2.6.2.post0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
@@ -3289,8 +3288,8 @@ requires-dist = [
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=0.11.0" },
     { name = "nest-asyncio", specifier = "~=1.5,>=1.5.1" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=2.2" },
-    { name = "pytest", marker = "extra == 'tests'", specifier = "~=7.0" },
-    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = "~=0.12,<0.17" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = "~=8.0" },
+    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = "~=0.25" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = "~=4.1" },
     { name = "pytest-notebook", marker = "extra == 'tests'", specifier = ">=0.8.0" },
     { name = "pyyaml", specifier = "~=6.0" },

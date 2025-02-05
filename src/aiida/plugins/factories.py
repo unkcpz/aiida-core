@@ -104,7 +104,7 @@ def BrokerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint,
     if not load:
         return entry_point
 
-    if isclass(entry_point) and issubclass(entry_point, Broker):
+    if isclass(entry_point) and isinstance(entry_point, Broker):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

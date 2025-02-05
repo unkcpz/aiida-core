@@ -506,7 +506,7 @@ class Config:
             except EntryPointError as exception:
                 raise ValueError(f'The entry point `{broker_backend}` could not be loaded.') from exception
             else:
-                if not issubclass(broker_cls, Broker):
+                if not isinstance(broker_cls, Broker):
                     raise TypeError(
                         f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
                     )

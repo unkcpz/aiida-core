@@ -457,7 +457,7 @@ def process_watch(broker: Broker, processes, most_recent_node):
 
         echo.echo(f'Process<{sender}> [{subject}|{correlation_id}]: {body}')
 
-    coordinator = broker.get_coordinator()
+    coordinator = broker.coordinator
     echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
 
     if most_recent_node:
