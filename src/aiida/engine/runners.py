@@ -19,7 +19,8 @@ import uuid
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
-from plumpy.rmq import wrap_communicator, RemoteProcessThreadController
+from plumpy.coordinator import Coordinator
+from plumpy.rmq import RemoteProcessThreadController
 from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
 
@@ -63,7 +64,7 @@ class Runner:
         self,
         poll_interval: Union[int, float] = 0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        coordinator: Optional[Coordinator] = None,
         broker_submit: bool = False,
         persister: Optional[Persister] = None,
     ):
@@ -89,9 +90,10 @@ class Runner:
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
 
-        if communicator is not None:
-            self._communicator = wrap_communicator(communicator, self._loop)
-            self._controller = RemoteProcessThreadController(communicator)
+        if coordinator is not None:
+            coordinator.set_loop(self._loop) # FIXME: how to do this properly to align the loop of coordinator and runner
+            self._communicator = coordinator
+            self._controller = RemoteProcessThreadController(coordinator)
         elif self._broker_submit:
             LOGGER.warning('Disabling broker submission, no communicator provided')
             self._broker_submit = False
