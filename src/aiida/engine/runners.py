@@ -24,6 +24,7 @@ from plumpy.rmq import RemoteProcessThreadController
 from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
 
+from aiida.brokers.broker import Broker
 from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
@@ -64,7 +65,7 @@ class Runner:
         self,
         poll_interval: Union[int, float] = 0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        coordinator: Optional[Coordinator] = None,
+        broker: Optional[Broker] = None,
         broker_submit: bool = False,
         persister: Optional[Persister] = None,
     ):
@@ -90,10 +91,10 @@ class Runner:
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
 
-        if coordinator is not None:
-            coordinator.set_loop(self._loop) # FIXME: how to do this properly to align the loop of coordinator and runner
-            self._coordinator = coordinator
-            self._controller = RemoteProcessThreadController(coordinator)
+        if broker is not None:
+            self._coordinator = broker.coordinator
+            self._controller = broker.controller
+            self._coordinator.set_loop(self._loop) # FIXME: how to do this properly to align the loop of coordinator and runner
         elif self._broker_submit:
             LOGGER.warning('Disabling broker submission, no coordinator provided')
             self._broker_submit = False
