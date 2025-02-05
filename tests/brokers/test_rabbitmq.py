@@ -32,7 +32,7 @@ def test_str_method(monkeypatch, manager):
     broker = manager.get_broker()
     assert 'RabbitMQ v' in str(broker)
 
-    monkeypatch.setattr(broker, 'get_coordinator', raise_connection_error)
+    monkeypatch.setattr(type(broker), 'coordinator', property(lambda self: raise_connection_error()))
     assert 'RabbitMQ @' in str(broker)
 
 

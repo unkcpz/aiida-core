@@ -13,8 +13,9 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from plumpy.coordinator import Coordinator
+
 if TYPE_CHECKING:
-    from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.rmq import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
@@ -288,6 +289,7 @@ class Manager:
         if self._broker is not None:
             return self._broker
 
+        # XXX: be careful with this loop, it can not be the event loop of main thread, why??
         return self.create_broker(loop)
 
     def create_broker(self, loop) -> 'Broker | None':
@@ -329,11 +331,10 @@ class Manager:
 
         return self._persister
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_coordinator(self) -> Coordinator:
         """Return the communicator
 
         :return: a global communicator instance
-
         """
         from aiida.common import ConfigurationError
 
@@ -345,7 +346,7 @@ class Manager:
                 f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
             )
 
-        return broker.get_coordinator()
+        return broker.coordinator
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
@@ -377,7 +378,8 @@ class Manager:
         from plumpy.rmq import RemoteProcessThreadController
 
         if self._process_controller is None:
-            self._process_controller = RemoteProcessThreadController(self.get_communicator())
+            coordinator = self.get_coordinator()
+            self._process_controller = RemoteProcessThreadController(coordinator)
 
         return self._process_controller
 
@@ -427,7 +429,7 @@ class Manager:
         if 'communicator' not in settings:
             # Only call get_communicator if we have to as it will lazily create
             try:
-                settings['communicator'] = self.get_communicator()
+                settings['communicator'] = self.get_coordinator()
             except ConfigurationError:
                 # The currently loaded profile does not define a broker and so there is no communicator
                 pass
