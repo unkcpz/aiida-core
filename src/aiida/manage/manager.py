@@ -10,11 +10,11 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from plumpy.coordinator import Coordinator
+
 if TYPE_CHECKING:
-    from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.rmq import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
@@ -58,8 +58,8 @@ class Manager:
 
     3. A single storage backend object for the profile, to connect to data storage resources
     5. A single daemon client object for the profile, to connect to the AiiDA daemon
-    4. A single communicator object for the profile, to connect to the process control resources
-    6. A single process controller object for the profile, which uses the communicator to control process tasks
+    4. A single coordinator object for the profile, to connect to the process control resources
+    6. A single process controller object for the profile, which uses the coordinator to control process tasks
     7. A single runner object for the profile, which uses the process controller to start and stop processes
     8. A single persister object for the profile, which can persist running processes to the profile storage
 
@@ -166,7 +166,7 @@ class Manager:
         self._profile_storage = None
 
     def reset_broker(self) -> None:
-        """Reset the communicator."""
+        """Reset the coordinator."""
         from concurrent import futures
 
         if self._broker is not None:
@@ -284,7 +284,14 @@ class Manager:
 
         return self._profile_storage
 
-    def get_broker(self) -> 'Broker' | None:
+    def get_broker(self, loop=None) -> 'Broker | None':
+        if self._broker is not None:
+            return self._broker
+
+        # XXX: be careful with this loop, it can not be the event loop of main thread, why??
+        return self.create_broker(loop)
+
+    def create_broker(self, loop) -> 'Broker | None':
         """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
@@ -323,11 +330,10 @@ class Manager:
 
         return self._persister
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
-        """Return the communicator
+    def get_coordinator(self) -> Coordinator:
+        """Return the coordinator
 
-        :return: a global communicator instance
-
+        :return: a global coordinator instance
         """
         from aiida.common import ConfigurationError
 
@@ -336,10 +342,10 @@ class Manager:
         if broker is None:
             assert self._profile is not None
             raise ConfigurationError(
-                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
+                f'profile `{self._profile.name}` does not provide a coordinator because it does not define a broker'
             )
 
-        return broker.get_communicator()
+        return broker.coordinator
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
@@ -371,7 +377,8 @@ class Manager:
         from plumpy.rmq import RemoteProcessThreadController
 
         if self._process_controller is None:
-            self._process_controller = RemoteProcessThreadController(self.get_communicator())
+            coordinator = self.get_coordinator()
+            self._process_controller = RemoteProcessThreadController(coordinator)
 
         return self._process_controller
 
@@ -418,49 +425,17 @@ class Manager:
         settings = {'broker_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
 
-        if 'communicator' not in settings:
-            # Only call get_communicator if we have to as it will lazily create
+        if 'broker' not in settings:
             try:
-                settings['communicator'] = self.get_communicator()
+                settings['broker'] = self.get_broker()
             except ConfigurationError:
-                # The currently loaded profile does not define a broker and so there is no communicator
+                # The currently loaded profile does not define a broker and so there is no coordinator
                 pass
 
         if with_persistence and 'persister' not in settings:
             settings['persister'] = self.get_persister()
 
         return runners.Runner(**settings)  # type: ignore[arg-type]
-
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
-        """Create and return a new daemon runner.
-
-        This is used by workers when the daemon is running and in testing.
-
-        :param loop: the (optional) asyncio event loop to use
-
-        :return: a runner configured to work in the daemon configuration
-
-        """
-        from plumpy.persistence import LoadSaveContext
-
-        from aiida.engine import persistence
-        from aiida.engine.processes.launcher import ProcessLauncher
-
-        runner = self.create_runner(broker_submit=True, loop=loop)
-        runner_loop = runner.loop
-
-        # Listen for incoming launch requests
-        task_receiver = ProcessLauncher(
-            loop=runner_loop,
-            persister=self.get_persister(),
-            load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader(),
-        )
-
-        assert runner.communicator is not None, 'communicator not set for runner'
-        runner.communicator.add_task_subscriber(task_receiver)
-
-        return runner
 
     def check_version(self):
         """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.

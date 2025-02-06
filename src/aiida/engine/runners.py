@@ -19,10 +19,12 @@ import uuid
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
-from plumpy.rmq import wrap_communicator, RemoteProcessThreadController
+from plumpy.coordinator import Coordinator
 from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
+from plumpy.rmq import RemoteProcessThreadController
 
+from aiida.brokers.broker import Broker
 from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
@@ -55,7 +57,7 @@ class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister: Optional[Persister] = None
-    _communicator: Optional[kiwipy.Communicator] = None
+    _coordinator: Optional[Coordinator] = None
     _controller: Optional[RemoteProcessThreadController] = None
     _closed: bool = False
 
@@ -63,7 +65,7 @@ class Runner:
         self,
         poll_interval: Union[int, float] = 0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        broker: Optional[Broker] = None,
         broker_submit: bool = False,
         persister: Optional[Persister] = None,
     ):
@@ -71,17 +73,17 @@ class Runner:
 
         :param poll_interval: interval in seconds between polling for status of active sub processes
         :param loop: an asyncio event loop, if none is suppled a new one will be created
-        :param communicator: the communicator to use
+        :param coordinator: the coordinator to use
         :param broker_submit: if True, processes will be submitted to the broker, otherwise they will be scheduled here
         :param persister: the persister to use to persist processes
 
         """
         assert not (
             broker_submit and persister is None
-        ), 'Must supply a persister if you want to submit using communicator'
+        ), 'Must supply a persister if you want to submit using coordinator'
 
         set_event_loop_policy()
-        self._loop = loop if loop is not None else asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._broker_submit = broker_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -89,11 +91,14 @@ class Runner:
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
 
-        if communicator is not None:
-            self._communicator = wrap_communicator(communicator, self._loop)
-            self._controller = RemoteProcessThreadController(communicator)
+        if broker is not None:
+            self._coordinator = broker.coordinator
+            self._controller = broker.controller
+            self._coordinator.set_loop(
+                self._loop
+            )  # FIXME: how to do this properly to align the loop of coordinator and runner
         elif self._broker_submit:
-            LOGGER.warning('Disabling broker submission, no communicator provided')
+            LOGGER.warning('Disabling broker submission, no coordinator provided')
             self._broker_submit = False
 
     def __enter__(self) -> 'Runner':
@@ -117,9 +122,9 @@ class Runner:
         return self._persister
 
     @property
-    def communicator(self) -> Optional[kiwipy.Communicator]:
-        """Get the communicator used by this runner."""
-        return self._communicator
+    def coordinator(self) -> Optional[Coordinator]:
+        """Get the coordinator used by this runner."""
+        return self._coordinator
 
     @property
     def plugin_version_provider(self) -> PluginVersionProvider:
@@ -329,16 +334,16 @@ class Runner:
                 callback()
             finally:
                 event.set()
-                if self.communicator:
-                    self.communicator.remove_broadcast_subscriber(subscriber_identifier)
+                if self._coordinator:
+                    self._coordinator.remove_broadcast_subscriber(subscriber_identifier)
 
         broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 
-        if self.communicator:
+        if self._coordinator:
             LOGGER.info('adding subscriber for broadcasts of %d', pk)
-            self.communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
+            self._coordinator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
 
     def get_process_future(self, pk: int) -> futures.ProcessFuture:
@@ -348,7 +353,7 @@ class Runner:
 
         :return: A future representing the completion of the process node
         """
-        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self._communicator)
+        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self._coordinator)
 
     def _poll_process(self, node, callback):
         """Check whether the process state of the node is terminated and call the callback or reschedule it.

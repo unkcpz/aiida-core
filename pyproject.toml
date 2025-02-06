@@ -34,7 +34,7 @@ dependencies = [
   'importlib-metadata~=6.0',
   'numpy~=1.21',
   'paramiko~=3.0',
-  "plumpy~=0.24.0",
+  "plumpy",
   'pgsu~=0.3.0',
   'psutil~=5.6',
   'psycopg[binary]~=3.0',
@@ -520,4 +520,4 @@ required-version = ">=0.5.21"
 
 [tool.uv.sources]
 # plumpy = { path = "../plumpy", editable = true }
-plumpy = { git = "https://github.com/unkcpz/plumpy", branch = "master" }
+plumpy = { git = "https://github.com/unkcpz/plumpy", branch = "fork" }

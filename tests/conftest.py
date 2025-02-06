@@ -540,9 +540,9 @@ def backend(manager):
 
 
 @pytest.fixture
-def communicator(manager):
-    """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
-    return manager.get_communicator()
+def coordinator(manager):
+    """Get the ``Coordinator`` instance of the currently loaded profile to coordinator with RabbitMQ."""
+    return manager.get_coordinator()
 
 
 @pytest.fixture

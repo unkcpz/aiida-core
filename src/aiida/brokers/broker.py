@@ -1,32 +1,36 @@
 """Interface for a message broker that facilitates communication with and between process runners."""
 
-import abc
-import typing as t
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-if t.TYPE_CHECKING:
+from plumpy.controller import ProcessController
+
+if TYPE_CHECKING:
+    from plumpy.coordinator import Coordinator
+
     from aiida.manage.configuration.profile import Profile
+
 
 __all__ = ('Broker',)
 
 
-class Broker:
+@runtime_checkable
+class Broker(Protocol):
     """Interface for a message broker that facilitates communication with and between process runners."""
 
-    def __init__(self, profile: 'Profile') -> None:
-        """Construct a new instance.
+    def __init__(self, profile: 'Profile') -> None: ...
 
-        :param profile: The profile.
-        """
-        self._profile = profile
+    @property
+    def coordinator(self) -> 'Coordinator':
+        """Return an instance of coordinator."""
+        ...
 
-    @abc.abstractmethod
-    def get_communicator(self):
-        """Return an instance of :class:`kiwipy.Communicator`."""
+    @property
+    def controller(self) -> ProcessController:
+        """Return the process controller"""
+        ...
 
-    @abc.abstractmethod
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
 
-    @abc.abstractmethod
     def close(self):
         """Close the broker."""

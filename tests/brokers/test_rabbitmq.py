@@ -13,7 +13,6 @@ import uuid
 
 import pytest
 import requests
-from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
 from aiida.brokers.rabbitmq import client, utils
@@ -32,7 +31,7 @@ def test_str_method(monkeypatch, manager):
     broker = manager.get_broker()
     assert 'RabbitMQ v' in str(broker)
 
-    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+    monkeypatch.setattr(type(broker), 'coordinator', property(lambda self: raise_connection_error()))
     assert 'RabbitMQ @' in str(broker)
 
 
@@ -83,23 +82,19 @@ def test_get_rmq_url(args, kwargs, expected):
             utils.get_rmq_url(*args, **kwargs)
 
 
-@pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
-def test_communicator(url):
-    """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
-
-    This class is used by all runners to communicate with the RabbitMQ server.
-    """
-    RmqThreadCommunicator.connect(connection_params={'url': url})
+@pytest.fixture
+def dummy_subscriber():
+    return lambda: None
 
 
-def test_add_rpc_subscriber(communicator):
+def test_add_rpc_subscriber(coordinator, dummy_subscriber):
     """Test ``add_rpc_subscriber``."""
-    communicator.add_rpc_subscriber(None)
+    coordinator.add_rpc_subscriber(dummy_subscriber)
 
 
-def test_add_broadcast_subscriber(communicator):
+def test_add_broadcast_subscriber(coordinator, dummy_subscriber):
     """Test ``add_broadcast_subscriber``."""
-    communicator.add_broadcast_subscriber(None)
+    coordinator.add_broadcast_subscriber(dummy_subscriber)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
